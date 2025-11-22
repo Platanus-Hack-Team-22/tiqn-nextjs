@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Twilio from "twilio";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../convex/_generated/api";
+import { type Id } from "convex/_generated/dataModel";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
   if (identityParam) {
     try {
       await convex.mutation(api.app_state.setActiveDispatcher, {
-        dispatcherId: identityParam as string,
+        dispatcherId: identityParam as Id<"dispatchers">,
       });
       console.log(`Token endpoint: Set active dispatcher to ${identityParam}`);
     } catch (e) {

@@ -1,6 +1,7 @@
+import { type Id } from "convex/_generated/dataModel";
+import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import Twilio from "twilio";
-import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
   const apiKey = process.env.TWILIO_API_KEY_SID;
   const apiSecret = process.env.TWILIO_API_KEY_SECRET;
   const voiceAppSid = process.env.TWILIO_VOICE_APP_SID;
-  const identity = identityParam ?? process.env.TWILIO_CLIENT_IDENTITY ?? "user";
+  const identity =
+    identityParam ?? process.env.TWILIO_CLIENT_IDENTITY ?? "user";
 
   if (!accountSid || !apiKey || !apiSecret || !voiceAppSid) {
     return NextResponse.json(
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
   if (identityParam) {
     try {
       await convex.mutation(api.app_state.setActiveDispatcher, {
-        dispatcherId: identityParam as string,
+        dispatcherId: identityParam as Id<"dispatchers">,
       });
       console.log(`Token endpoint: Set active dispatcher to ${identityParam}`);
     } catch (e) {

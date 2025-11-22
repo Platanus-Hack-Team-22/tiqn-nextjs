@@ -76,7 +76,7 @@ export default function LiveIncidentPage() {
   }
 
   const transcriptionChunks = incident.call?.transcriptionChunks ?? [];
-  const fullTranscription = incident.call?.transcription;
+  const fullTranscription = incident.fullTranscript ?? incident.call?.transcription;
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50">

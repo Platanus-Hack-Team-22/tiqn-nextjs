@@ -450,7 +450,7 @@ export const createOrUpdate = mutation({
     // Patient info (campos planos del backend)
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
-    patientAge: v.optional(v.number()),
+    patientAge: v.optional(v.float64()),
     patientSex: v.optional(v.union(v.literal("M"), v.literal("F"))),
     
     // Medical status

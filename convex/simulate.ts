@@ -61,7 +61,7 @@ export const simulateTranscriptionChunk = internalMutation({
   args: {
     callId: v.id("calls"),
     chunk: v.object({
-      offset: v.number(),
+      offset: v.float64(),
       speaker: v.union(v.literal("caller"), v.literal("dispatcher"), v.literal("system")),
       text: v.string(),
     }),

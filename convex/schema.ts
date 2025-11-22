@@ -202,10 +202,10 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   // --------------------------------------------------------------------------
-  // APP STATE
+  // APP STATE (Singleton)
   // --------------------------------------------------------------------------
   app_state: defineTable({
-    key: v.string(),
+    key: v.literal("global"),
     activeDispatcherId: v.optional(v.id("dispatchers")),
   }).index("by_key", ["key"]),
 });

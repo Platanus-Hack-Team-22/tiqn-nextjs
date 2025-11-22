@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Device, type Call } from "@twilio/voice-sdk";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 
 type CallStatus = "initializing" | "ready" | "incoming" | "connected" | "offline" | "error";
 
@@ -11,11 +14,15 @@ interface TokenResponse {
 }
 
 export default function Home() {
-  // device state is mainly for debugging/display, actual cleanup uses local var
+  const dispatchers = useQuery(api.dispatchers.list);
+  const createDispatcher = useMutation(api.dispatchers.create);
+  const setActiveDispatcher = useMutation(api.app_state.setActiveDispatcher);
+
   const [currentCall, setCurrentCall] = useState<Call | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("initializing");
   const [identity, setIdentity] = useState<string>("");
   const [logs, setLogs] = useState<string[]>([]);
+  const [selectedDispatcherId, setSelectedDispatcherId] = useState<string>("");
 
   const addLog = (msg: string) => {
     const time = new Date().toISOString().split('T')[1]?.split('.')[0] ?? "00:00:00";
@@ -23,14 +30,39 @@ export default function Home() {
     console.log(msg);
   };
 
+  // Create mock dispatcher if none exist
   useEffect(() => {
+    if (dispatchers?.length === 0) {
+      addLog("No dispatchers found. Creating mock dispatcher...");
+      createDispatcher({ name: "Mock Dispatcher", phone: "+56912345678" })
+        .then((id) => addLog(`Created mock dispatcher: ${id}`))
+        .catch((e) => addLog(`Error creating mock dispatcher: ${e as string}`));
+    }
+  }, [dispatchers, createDispatcher]);
+
+  // Handle selection change
+  const handleDispatcherChange = async (id: string) => {
+    setSelectedDispatcherId(id);
+    try {
+      await setActiveDispatcher({ dispatcherId: id as Id<"dispatchers"> });
+      addLog(`Active dispatcher set to: ${id}`);
+    } catch (e) {
+      addLog(`Error setting active dispatcher: ${e as string}`);
+    }
+  };
+
+  // Initialize Device when selectedDispatcherId changes
+  useEffect(() => {
+    if (!selectedDispatcherId) return;
+
     let mounted = true;
     let activeDevice: Device | null = null;
 
     const initDevice = async () => {
       try {
-        addLog("Fetching access token...");
-        const response = await fetch("/api/twilio/token");
+        addLog(`Fetching access token for ${selectedDispatcherId}...`);
+        // Pass the selected dispatcher ID as identity
+        const response = await fetch(`/api/twilio/token?identity=${selectedDispatcherId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch token: ${response.statusText}`);
         }
@@ -100,10 +132,11 @@ export default function Home() {
     return () => {
       mounted = false;
       if (activeDevice) {
+        addLog("Cleaning up device...");
         activeDevice.destroy();
       }
     };
-  }, []);
+  }, [selectedDispatcherId]);
 
   const handleAccept = () => {
     if (currentCall) {
@@ -140,6 +173,23 @@ export default function Home() {
         </div>
 
         <div className="p-8 flex flex-col items-center gap-6">
+          {/* Dispatcher Selection */}
+          <div className="w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Dispatcher</label>
+            <select
+              className="w-full p-2 border rounded-md bg-white shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
+              value={selectedDispatcherId}
+              onChange={(e) => handleDispatcherChange(e.target.value)}
+            >
+              <option value="" disabled>Select a dispatcher...</option>
+              {dispatchers?.map((d) => (
+                <option key={d._id} value={d._id}>
+                  {d.name} {d.phone ? `(${d.phone})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className={`text-xl font-semibold px-4 py-2 rounded-full ${
             callStatus === 'incoming' ? 'bg-yellow-100 text-yellow-700 animate-pulse' :
             callStatus === 'connected' ? 'bg-green-100 text-green-700' :

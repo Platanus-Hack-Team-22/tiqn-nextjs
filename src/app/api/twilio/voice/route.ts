@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { twiml } from "twilio";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
   try {
@@ -11,19 +15,32 @@ export async function POST(request: Request) {
 
     console.log("Incoming call:", { callSid, from, to });
 
+    // Fetch active dispatcher
+    let dispatcherId: string | undefined;
+    try {
+      dispatcherId = await convex.query(api.app_state.getActiveDispatcher);
+      console.log("Active dispatcher ID:", dispatcherId);
+    } catch (e) {
+      console.error("Failed to fetch active dispatcher", e);
+    }
+
     // TODO: Add Twilio signature validation here
     // const signature = request.headers.get('x-twilio-signature');
     // ... validate ...
 
     const response = new twiml.VoiceResponse();
     const mediaStreamWssUrl = process.env.MEDIA_STREAM_WSS_URL;
-    const clientIdentity = process.env.TWILIO_CLIENT_IDENTITY ?? "user";
+    const clientIdentity = dispatcherId ?? process.env.TWILIO_CLIENT_IDENTITY ?? "user";
 
     if (mediaStreamWssUrl) {
       // Fork the inbound audio to a Twilio Media Stream WebSocket URL
+      const streamUrl = dispatcherId
+        ? `${mediaStreamWssUrl}?dispatcher_id=${dispatcherId}`
+        : mediaStreamWssUrl;
+        
       const start = response.start();
       start.stream({
-        url: mediaStreamWssUrl,
+        url: streamUrl,
       });
     } else {
       console.warn("MEDIA_STREAM_WSS_URL not set, skipping media stream start");

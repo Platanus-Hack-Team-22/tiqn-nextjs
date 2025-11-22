@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as app_state from "../app_state.js";
 import type * as calls from "../calls.js";
 import type * as dispatchers from "../dispatchers.js";
 import type * as incidents from "../incidents.js";
@@ -27,6 +28,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  app_state: typeof app_state;
   calls: typeof calls;
   dispatchers: typeof dispatchers;
   incidents: typeof incidents;

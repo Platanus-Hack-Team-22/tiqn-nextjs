@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import Twilio from "twilio";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const identityParam = searchParams.get("identity");
+
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const apiKey = process.env.TWILIO_API_KEY_SID;
   const apiSecret = process.env.TWILIO_API_KEY_SECRET;
   const voiceAppSid = process.env.TWILIO_VOICE_APP_SID;
-  const identity = process.env.TWILIO_CLIENT_IDENTITY ?? "user";
+  const identity = identityParam ?? process.env.TWILIO_CLIENT_IDENTITY ?? "user";
 
   if (!accountSid || !apiKey || !apiSecret || !voiceAppSid) {
     return NextResponse.json(

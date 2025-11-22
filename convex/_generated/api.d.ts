@@ -8,7 +8,10 @@
  * @module
  */
 
+import type * as dispatchers from "../dispatchers.js";
+import type * as incidents from "../incidents.js";
 import type * as init from "../init.js";
+import type * as system from "../system.js";
 import type * as tasks from "../tasks.js";
 import type * as verification from "../verification.js";
 
@@ -19,7 +22,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  dispatchers: typeof dispatchers;
+  incidents: typeof incidents;
   init: typeof init;
+  system: typeof system;
   tasks: typeof tasks;
   verification: typeof verification;
 }>;

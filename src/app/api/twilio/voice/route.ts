@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         : mediaStreamWssUrl;
 
       console.log("Media Stream URL:", streamUrl);
-      console.log("Using dispatcher_id:", dispatcherId || "NOT SET - using fallback");
+      console.log("Using dispatcher_id:", dispatcherId ?? "NOT SET - using fallback");
 
       const start = response.start();
       start.stream({

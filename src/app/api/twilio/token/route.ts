@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   if (identityParam) {
     try {
       await convex.mutation(api.app_state.setActiveDispatcher, {
-        dispatcherId: identityParam as any,
+        dispatcherId: identityParam as string,
       });
       console.log(`Token endpoint: Set active dispatcher to ${identityParam}`);
     } catch (e) {

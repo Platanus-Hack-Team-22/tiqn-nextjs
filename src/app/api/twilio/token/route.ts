@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
-import Twilio from 'twilio';
+import { NextResponse } from "next/server";
+import Twilio from "twilio";
 
 export async function GET() {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const apiKey = process.env.TWILIO_API_KEY_SID;
   const apiSecret = process.env.TWILIO_API_KEY_SECRET;
   const voiceAppSid = process.env.TWILIO_VOICE_APP_SID;
-  const identity = process.env.TWILIO_CLIENT_IDENTITY || 'user';
+  const identity = process.env.TWILIO_CLIENT_IDENTITY ?? "user";
 
   if (!accountSid || !apiKey || !apiSecret || !voiceAppSid) {
     return NextResponse.json(
-      { error: 'Missing Twilio environment variables' },
-      { status: 500 }
+      { error: "Missing Twilio environment variables" },
+      { status: 500 },
     );
   }
 
@@ -36,4 +36,3 @@ export async function GET() {
     token: token.toJwt(),
   });
 }
-

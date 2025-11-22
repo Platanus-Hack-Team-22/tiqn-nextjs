@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const response = new twiml.VoiceResponse();
     const mediaStreamWssUrl = process.env.MEDIA_STREAM_WSS_URL;
-    const clientIdentity = process.env.TWILIO_CLIENT_IDENTITY || 'user';
+    const clientIdentity = process.env.TWILIO_CLIENT_IDENTITY ?? 'user';
 
     if (mediaStreamWssUrl) {
       // Fork the inbound audio to a Twilio Media Stream WebSocket URL

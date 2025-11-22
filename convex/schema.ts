@@ -57,8 +57,15 @@ export default defineSchema({
   rescuers: defineTable({
     name: v.string(),
     phone: v.string(),
-    
-    // Stats (optional)
+
+    currentLocation: v.optional(
+      v.object({
+        lat: v.number(),
+        lng: v.number(),
+        lastUpdated: v.optional(v.number()),
+      })
+    ),
+
     stats: v.optional(
       v.object({
         totalRescues: v.number(),
@@ -173,18 +180,20 @@ export default defineSchema({
   // --------------------------------------------------------------------------
   incidentAssignments: defineTable({
     incidentId: v.id("incidents"),
-    rescuerId: v.id("rescuers"),
+    rescuerId: v.optional(v.id("rescuers")),
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
       v.literal("rejected"),
-      v.literal("cancelled")
+      v.literal("cancelled"),
+      v.literal("completed")
     ),
     times: v.optional(
       v.object({
         offered: v.number(),
         responded: v.optional(v.number()),
         accepted: v.optional(v.number()),
+        completed: v.optional(v.number()),
       })
     ),
   })

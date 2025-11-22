@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     // Fetch active dispatcher
     let dispatcherId: string | undefined;
     try {
-      dispatcherId = await convex.query(api.app_state.getActiveDispatcher);
+      const dispatcher = await convex.query(api.app_state.getActiveDispatcher);
+      dispatcherId = dispatcher ?? undefined;
       console.log("Active dispatcher ID:", dispatcherId);
     } catch (e) {
       console.error("Failed to fetch active dispatcher", e);

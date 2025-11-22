@@ -200,5 +200,13 @@ export default defineSchema({
     .index("by_incident", ["incidentId"])
     .index("by_rescuer", ["rescuerId"])
     .index("by_status", ["status"]),
+
+  // --------------------------------------------------------------------------
+  // APP STATE
+  // --------------------------------------------------------------------------
+  app_state: defineTable({
+    key: v.string(),
+    activeDispatcherId: v.optional(v.id("dispatchers")),
+  }).index("by_key", ["key"]),
 });
 

@@ -73,7 +73,7 @@ export const createTestData = internalMutation({
       "Latex", "Sulfa drugs",
     ];
 
-    const randomElement = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const randomElement = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
 
     const randomInt = (min: number, max: number) =>
       Math.floor(Math.random() * (max - min + 1)) + min;
@@ -174,19 +174,15 @@ export const createTestData = internalMutation({
       const priority = randomElement(priorities) as "low" | "medium" | "high" | "critical";
 
       const incidentId = await ctx.db.insert("incidents", {
-        incidentNumber: `INC-2025-${String(1000 + i).padStart(4, "0")}`,
         status: "confirmed" as const,
         priority,
         incidentType: randomElement(incidentTypes),
         description: randomElement(descriptions),
-        location: {
-          address: `${street} ${number}, ${loc.comuna}, Santiago`,
-          city: "Santiago",
-          district: loc.comuna,
-          coordinates: {
-            lat: loc.lat,
-            lng: loc.lng,
-          },
+        address: `${street} ${number}, ${loc.comuna}, Santiago`,
+        district: loc.comuna,
+        coordinates: {
+          lat: loc.lat,
+          lng: loc.lng,
         },
         dispatcherId: dispatcher,
         patientId,

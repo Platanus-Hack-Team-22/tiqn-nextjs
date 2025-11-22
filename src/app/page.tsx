@@ -50,6 +50,7 @@ export default function Home() {
         void handleDispatcherChange(first._id);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatchers, createDispatcher, selectedDispatcherId]);
 
   // Handle selection change

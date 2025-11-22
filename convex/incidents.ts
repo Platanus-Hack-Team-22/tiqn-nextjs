@@ -90,6 +90,9 @@ export const createOrUpdate = mutation({
   },
 });
 
+// Alias for the Python backend which expects "create"
+export const create = createOrUpdate;
+
 /**
  * Get incident by session ID (for Python backend)
  */
@@ -102,5 +105,33 @@ export const getBySession = query({
       .query("incidents")
       .withIndex("by_session", (q) => q.eq("callSessionId", args.callSessionId))
       .first();
+  },
+});
+
+/**
+ * Get incident by ID
+ */
+export const get = query({
+  args: {
+    id: v.id("incidents"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+/**
+ * List recent incidents
+ */
+export const listRecent = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 10;
+    return await ctx.db
+      .query("incidents")
+      .order("desc")
+      .take(limit);
   },
 });

@@ -2,15 +2,25 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { DispatcherHeader } from "~/components/ui/DispatcherHeader";
 import { IncidentCard } from "~/components/ui/IncidentCard";
 import { useMemo, useState, useEffect } from "react";
 
+type IncidentWithRelations = {
+  _id: Id<"incidents">;
+  incidentType?: string | null;
+  address?: string | null;
+  patient?: { phone?: string | null } | null;
+  priority: "low" | "medium" | "high" | "critical";
+  status: "incoming_call" | "confirmed" | "rescuer_assigned" | "in_progress" | "completed" | "cancelled";
+  elapsedTime?: string;
+};
 
 export default function DispatcherDashboard() {
-  const incomingCalls = useQuery(api.incidents.getIncomingCalls);
-  const activeIncidents = useQuery(api.incidents.getActiveIncidents);
-  const recentIncidents = useQuery(api.incidents.getRecentIncidents, { limit: 10 });
+  const incomingCalls = useQuery(api.incidents.getIncomingCalls) as IncidentWithRelations[] | undefined;
+  const activeIncidents = useQuery(api.incidents.getActiveIncidents) as IncidentWithRelations[] | undefined;
+  const recentIncidents = useQuery(api.incidents.getRecentIncidents, { limit: 10 }) as IncidentWithRelations[] | undefined;
   const [currentTime, setCurrentTime] = useState<string>("");
 
   // Update time only on client to avoid hydration mismatch
@@ -26,8 +36,8 @@ export default function DispatcherDashboard() {
   // Calculate elapsed time for active incidents
   // Note: Since schema doesn't have createdAt, we'll show a placeholder
   const incidentsWithTime = useMemo(() => {
-    if (!activeIncidents) return [];
-    return activeIncidents.map((incident) => {
+    if (!activeIncidents) return [] as IncidentWithRelations[];
+    return activeIncidents.map((incident): IncidentWithRelations => {
       // For now, use a placeholder since schema doesn't have createdAt
       // TODO: Add createdAt field to incidents schema
       return {
@@ -64,7 +74,7 @@ export default function DispatcherDashboard() {
                     incidentNumber={incident._id.slice(-8)} // Usar últimos 8 caracteres del ID como número
                     incidentType={incident.incidentType ?? "Llamada entrante"}
                     location={incident.address ?? "Ubicación pendiente"}
-                    phone={incident.patient?.phone}
+                    phone={incident.patient?.phone ?? undefined}
                     priority={incident.priority}
                     status={incident.status}
                   />
@@ -100,9 +110,9 @@ export default function DispatcherDashboard() {
                     key={incident._id}
                     incidentId={incident._id}
                     incidentNumber={incident._id.slice(-8)} // Usar últimos 8 caracteres del ID
-                    incidentType={incident.incidentType}
+                    incidentType={incident.incidentType ?? undefined}
                     location={incident.address ?? "Ubicación pendiente"}
-                    phone={incident.patient?.phone}
+                    phone={incident.patient?.phone ?? undefined}
                     priority={incident.priority}
                     status={incident.status}
                     elapsedTime={incident.elapsedTime}

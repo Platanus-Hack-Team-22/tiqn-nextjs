@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import Twilio from "twilio";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,6 +20,18 @@ export async function GET(request: Request) {
       { error: "Missing Twilio environment variables" },
       { status: 500 },
     );
+  }
+
+  // Set the active dispatcher if an identity (dispatcher ID) was provided
+  if (identityParam) {
+    try {
+      await convex.mutation(api.app_state.setActiveDispatcher, {
+        dispatcherId: identityParam as any,
+      });
+      console.log(`Token endpoint: Set active dispatcher to ${identityParam}`);
+    } catch (e) {
+      console.error("Token endpoint: Failed to set active dispatcher", e);
+    }
   }
 
   const AccessToken = Twilio.jwt.AccessToken;

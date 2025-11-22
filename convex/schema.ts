@@ -78,8 +78,6 @@ export default defineSchema({
   // INCIDENTS (Emergencies)
   // --------------------------------------------------------------------------
   incidents: defineTable({
-    incidentNumber: v.string(), // e.g. INC-2024-0892
-
     // Status & Priority
     status: v.union(
       v.literal("incoming_call"),
@@ -100,27 +98,63 @@ export default defineSchema({
     incidentType: v.optional(v.string()),
     description: v.optional(v.string()),
 
-    // Location
-    location: v.object({
-      address: v.string(),
-      city: v.optional(v.string()),
-      district: v.optional(v.string()),
-      coordinates: v.optional(
-        v.object({
-          lat: v.number(),
-          lng: v.number(),
-        })
-      ),
-      reference: v.optional(v.string()),
-    }),
+    // Location (split into separate fields)
+    address: v.optional(v.string()),
+    district: v.optional(v.string()),
+    reference: v.optional(v.string()),
+    coordinates: v.optional(
+      v.object({
+        lat: v.number(),
+        lng: v.number(),
+      })
+    ),
 
     // Relationships
     dispatcherId: v.id("dispatchers"),
     patientId: v.optional(v.id("patients")),
+
+    // Real-time call tracking (from Python AI extraction)
+    callSessionId: v.optional(v.string()),
+    lastUpdated: v.optional(v.number()),
+
+    // Patient info (extracted during call)
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    patientAge: v.optional(v.number()),
+    patientSex: v.optional(v.string()),
+
+    // Medical status
+    consciousness: v.optional(v.string()),
+    breathing: v.optional(v.string()),
+    avdi: v.optional(v.string()),
+    respiratoryStatus: v.optional(v.string()),
+
+    // Medical details
+    symptomOnset: v.optional(v.string()),
+    medicalHistory: v.optional(v.string()),
+    currentMedications: v.optional(v.string()),
+    allergies: v.optional(v.string()),
+    vitalSigns: v.optional(v.string()),
+
+    // Location details
+    apartment: v.optional(v.string()),
+
+    // Resources
+    requiredRescuers: v.optional(v.string()),
+    requiredResources: v.optional(v.string()),
+
+    // Administrative
+    healthInsurance: v.optional(v.string()),
+    conciergeNotified: v.optional(v.string()),
+
+    // Complete data
+    fullTranscript: v.optional(v.string()),
+    rawCanonicalData: v.optional(v.any()),
   })
     .index("by_status", ["status"])
     .index("by_dispatcher", ["dispatcherId"])
-    .index("by_patient", ["patientId"]),
+    .index("by_patient", ["patientId"])
+    .index("by_session", ["callSessionId"]),
 
   // --------------------------------------------------------------------------
   // CALLS (Twilio integration)

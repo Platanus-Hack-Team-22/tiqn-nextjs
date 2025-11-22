@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as init from "../init.js";
 import type * as tasks from "../tasks.js";
+import type * as verification from "../verification.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +19,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  init: typeof init;
   tasks: typeof tasks;
+  verification: typeof verification;
 }>;
 
 /**

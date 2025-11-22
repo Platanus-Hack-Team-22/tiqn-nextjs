@@ -1,17 +1,24 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+// Create patient record (called by backend)
 export const create = mutation({
   args: {
     rut: v.optional(v.string()),
     firstName: v.string(),
     lastName: v.string(),
-    age: v.optional(v.number()),
+    age: v.optional(v.float64()),
     sex: v.optional(v.union(v.literal("M"), v.literal("F"), v.literal("Other"))),
     phone: v.optional(v.string()),
     address: v.optional(v.string()),
     city: v.optional(v.string()),
     district: v.optional(v.string()),
+    coordinates: v.optional(
+      v.object({
+        lat: v.float64(),
+        lng: v.float64(),
+      })
+    ),
     medicalHistory: v.array(v.string()),
     medications: v.array(v.string()),
     allergies: v.array(v.string()),
@@ -24,15 +31,11 @@ export const create = mutation({
     ),
     photoUrl: v.optional(v.string()),
     notes: v.optional(v.string()),
-    // Allow system fields to be passed (will be ignored/overwritten)
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    // Allow system fields to be passed (will be overwritten)
+    createdAt: v.optional(v.float64()),
+    updatedAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
-    // Filter out system fields to ensure we don't pass them to insert if we want clean behavior,
-    // but since we overwrite them below, it's fine.
-    // However, to be cleaner, let's destructure them out if we want to be explicit.
-    // But for now, just adding them to validator is enough to stop the error.
     const { createdAt, updatedAt, ...cleanArgs } = args;
     
     const patientId = await ctx.db.insert("patients", {
@@ -44,6 +47,7 @@ export const create = mutation({
   },
 });
 
+// Get patient by ID (called by backend)
 export const get = query({
   args: {
     id: v.id("patients"),
@@ -52,4 +56,3 @@ export const get = query({
     return await ctx.db.get(args.id);
   },
 });
-

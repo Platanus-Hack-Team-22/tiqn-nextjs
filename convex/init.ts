@@ -70,6 +70,7 @@ export const seed = internalMutation({
     });
 
     // 4. Create an Active Incident (Cardiac Arrest)
+    // Schema de main: campos planos de location, sin incidentNumber
     const incidentId = await ctx.db.insert("incidents", {
       status: "confirmed",
       priority: "critical",
@@ -83,6 +84,7 @@ export const seed = internalMutation({
       },
       dispatcherId: danielId,
       patientId: patientRobertoId,
+      lastUpdated: Date.now(),
     });
 
     // 5. Create the Call Record

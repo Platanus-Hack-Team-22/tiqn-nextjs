@@ -18,7 +18,7 @@ export const createIncomingCall = mutation({
   args: {
     twilioCallSid: v.optional(v.string()),
     callerPhone: v.optional(v.string()),
-    startedAt: v.optional(v.number()),
+    startedAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
     // Obtener primer dispatcher disponible
@@ -64,7 +64,7 @@ export const create = mutation({
     transcriptionChunks: v.optional(
       v.array(
         v.object({
-          offset: v.number(),
+          offset: v.float64(),
           speaker: v.union(v.literal("caller"), v.literal("dispatcher"), v.literal("system")),
           text: v.string(),
         })
@@ -102,7 +102,7 @@ export const addTranscriptionChunk = mutation({
   args: {
     callId: v.id("calls"),
     chunk: v.object({
-      offset: v.number(),
+      offset: v.float64(),
       speaker: v.union(v.literal("caller"), v.literal("dispatcher"), v.literal("system")),
       text: v.string(),
     }),
@@ -127,4 +127,3 @@ export const addTranscriptionChunk = mutation({
     return { success: true, totalChunks: newChunks.length };
   },
 });
-

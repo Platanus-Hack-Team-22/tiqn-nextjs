@@ -2,13 +2,18 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  app_state: defineTable({
+    activeDispatcherId: v.optional(v.id("dispatchers")),
+    key: v.literal("global"),
+  }).index("by_key", ["key"]),
+
   calls: defineTable({
     incidentId: v.id("incidents"),
     transcription: v.optional(v.string()),
     transcriptionChunks: v.optional(
       v.array(
         v.object({
-          offset: v.number(),
+          offset: v.float64(),
           speaker: v.union(
             v.literal("caller"),
             v.literal("dispatcher"),
@@ -18,21 +23,11 @@ export default defineSchema({
         })
       )
     ),
-    // Campos adicionales para compatibilidad con datos antiguos
-    callerPhone: v.optional(v.string()),
-    twilioCallSid: v.optional(v.string()),
-    startedAt: v.optional(v.number()),
-    status: v.optional(v.string()),
   }).index("by_incident", ["incidentId"]),
 
   dispatchers: defineTable({
     name: v.string(),
     phone: v.optional(v.string()),
-    // Campos adicionales para compatibilidad con datos antiguos
-    badgeNumber: v.optional(v.string()),
-    email: v.optional(v.string()),
-    isActive: v.optional(v.boolean()),
-    createdAt: v.optional(v.number()),
   }),
 
   incidentAssignments: defineTable({
@@ -47,10 +42,10 @@ export default defineSchema({
     ),
     times: v.optional(
       v.object({
-        offered: v.number(),
-        responded: v.optional(v.number()),
-        accepted: v.optional(v.number()),
-        completed: v.optional(v.number()),
+        accepted: v.optional(v.float64()),
+        completed: v.optional(v.float64()),
+        offered: v.float64(),
+        responded: v.optional(v.float64()),
       })
     ),
   })
@@ -68,20 +63,20 @@ export default defineSchema({
     conciergeNotified: v.optional(v.string()),
     consciousness: v.optional(v.string()),
     coordinates: v.optional(
-      v.object({ lat: v.number(), lng: v.number() })
+      v.object({ lat: v.float64(), lng: v.float64() })
     ),
     currentMedications: v.optional(v.string()),
     description: v.optional(v.string()),
-    dispatcherId: v.optional(v.id("dispatchers")), // Hacemos opcional temporalmente para tolerar datos antiguos
+    dispatcherId: v.id("dispatchers"),
     district: v.optional(v.string()),
     firstName: v.optional(v.string()),
     fullTranscript: v.optional(v.string()),
     healthInsurance: v.optional(v.string()),
     incidentType: v.optional(v.string()),
     lastName: v.optional(v.string()),
-    lastUpdated: v.optional(v.number()),
+    lastUpdated: v.optional(v.float64()),
     medicalHistory: v.optional(v.string()),
-    patientAge: v.optional(v.number()),
+    patientAge: v.optional(v.float64()),
     patientId: v.optional(v.id("patients")),
     patientSex: v.optional(v.string()),
     priority: v.union(
@@ -105,28 +100,6 @@ export default defineSchema({
     ),
     symptomOnset: v.optional(v.string()),
     vitalSigns: v.optional(v.string()),
-    // Campos adicionales para compatibilidad con datos antiguos
-    estimates: v.optional(
-      v.object({
-        distanceKm: v.optional(v.number()),
-        etaMinutes: v.optional(v.number()),
-      })
-    ),
-    incidentNumber: v.optional(v.string()),
-    location: v.optional(
-      v.object({
-        address: v.optional(v.string()),
-        coordinates: v.optional(
-          v.object({ lat: v.number(), lng: v.number() })
-        ),
-      })
-    ),
-    times: v.optional(
-      v.object({
-        callReceived: v.optional(v.number()),
-        confirmed: v.optional(v.number()),
-      })
-    ),
   })
     .index("by_dispatcher", ["dispatcherId"])
     .index("by_patient", ["patientId"])
@@ -135,14 +108,14 @@ export default defineSchema({
 
   patients: defineTable({
     address: v.optional(v.string()),
-    age: v.optional(v.number()),
+    age: v.optional(v.float64()),
     allergies: v.array(v.string()),
     bloodType: v.optional(v.string()),
     city: v.optional(v.string()),
     coordinates: v.optional(
-      v.object({ lat: v.number(), lng: v.number() })
+      v.object({ lat: v.float64(), lng: v.float64() })
     ),
-    createdAt: v.number(),
+    createdAt: v.float64(),
     district: v.optional(v.string()),
     emergencyContact: v.optional(
       v.object({ name: v.string(), phone: v.string() })
@@ -162,30 +135,24 @@ export default defineSchema({
         v.literal("Other")
       )
     ),
-    updatedAt: v.number(),
+    updatedAt: v.float64(),
   }).index("by_rut", ["rut"]),
 
   rescuers: defineTable({
-    name: v.string(),
-    phone: v.string(),
     currentLocation: v.optional(
       v.object({
-        lat: v.number(),
-        lng: v.number(),
-        lastUpdated: v.optional(v.number()),
+        lastUpdated: v.optional(v.float64()),
+        lat: v.float64(),
+        lng: v.float64(),
       })
     ),
+    name: v.string(),
+    phone: v.string(),
     stats: v.optional(
       v.object({
-        totalRescues: v.number(),
-        avgResponseTime: v.optional(v.number()),
+        avgResponseTime: v.optional(v.float64()),
+        totalRescues: v.float64(),
       })
     ),
-    // Campos adicionales para compatibilidad con datos antiguos
-    badgeNumber: v.optional(v.string()),
-    email: v.optional(v.string()),
-    isActive: v.optional(v.boolean()),
-    createdAt: v.optional(v.number()),
-    status: v.optional(v.string()),
   }),
 });

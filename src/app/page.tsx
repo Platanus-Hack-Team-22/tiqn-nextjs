@@ -1,79 +1,255 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useEffect, useState } from "react";
+import { Device, type Call } from "@twilio/voice-sdk";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+
+type CallStatus = "initializing" | "ready" | "incoming" | "connected" | "offline" | "error";
+
+interface TokenResponse {
+  identity: string;
+  token: string;
+}
 
 export default function Home() {
-  // Queries to verify seed data
-  const dispatchers = useQuery(api.verification.getDispatchers);
-  const incidents = useQuery(api.verification.getIncidents);
-  const patients = useQuery(api.verification.getPatients);
+  const dispatchers = useQuery(api.dispatchers.list);
+  const createDispatcher = useMutation(api.dispatchers.create);
+  const setActiveDispatcher = useMutation(api.app_state.setActiveDispatcher);
+
+  const [currentCall, setCurrentCall] = useState<Call | null>(null);
+  const [callStatus, setCallStatus] = useState<CallStatus>("initializing");
+  const [identity, setIdentity] = useState<string>("");
+  const [logs, setLogs] = useState<string[]>([]);
+  const [selectedDispatcherId, setSelectedDispatcherId] = useState<string>("");
+
+  const addLog = (msg: string) => {
+    const time = new Date().toISOString().split('T')[1]?.split('.')[0] ?? "00:00:00";
+    setLogs((prev) => [...prev, `${time} - ${msg}`]);
+    console.log(msg);
+  };
+
+  // Create mock dispatcher if none exist
+  useEffect(() => {
+    if (dispatchers === undefined) return; // Loading
+
+    if (dispatchers.length === 0) {
+      addLog("No dispatchers found. Creating mock dispatcher...");
+      createDispatcher({ name: "Mock Dispatcher", phone: "+56912345678" })
+        .then((id) => {
+          addLog(`Created mock dispatcher: ${id}`);
+          void handleDispatcherChange(id);
+        })
+        .catch((e) => addLog(`Error creating mock dispatcher: ${e as string}`));
+    } else if (!selectedDispatcherId && dispatchers.length > 0) {
+      // Auto-select the first dispatcher if none selected
+      const first = dispatchers[0];
+      if (first) {
+        addLog(`Auto-selecting dispatcher: ${first.name}`);
+        void handleDispatcherChange(first._id);
+      }
+    }
+  }, [dispatchers, createDispatcher, selectedDispatcherId]);
+
+  // Handle selection change
+  const handleDispatcherChange = async (id: string) => {
+    setSelectedDispatcherId(id);
+    try {
+      await setActiveDispatcher({ dispatcherId: id as Id<"dispatchers"> });
+      addLog(`Active dispatcher set to: ${id}`);
+    } catch (e) {
+      addLog(`Error setting active dispatcher: ${e as string}`);
+    }
+  };
+
+  // Initialize Device when selectedDispatcherId changes
+  useEffect(() => {
+    if (!selectedDispatcherId) return;
+
+    let mounted = true;
+    let activeDevice: Device | null = null;
+
+    const initDevice = async () => {
+      try {
+        addLog(`Fetching access token for ${selectedDispatcherId}...`);
+        // Pass the selected dispatcher ID as identity
+        const response = await fetch(`/api/twilio/token?identity=${selectedDispatcherId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch token: ${response.statusText}`);
+        }
+        const data = (await response.json()) as TokenResponse;
+        
+        if (!mounted) return;
+
+        setIdentity(data.identity);
+        addLog(`Got token for identity: ${data.identity}`);
+
+        const newDevice = new Device(data.token, {
+          logLevel: 1,
+        });
+
+        newDevice.on("registered", () => {
+          if (!mounted) return;
+          addLog("Device registered and ready");
+          setCallStatus("ready");
+        });
+
+        newDevice.on("error", (error: { message: string }) => {
+          if (!mounted) return;
+          addLog(`Device error: ${error.message}`);
+          setCallStatus("error");
+        });
+
+        newDevice.on("incoming", (call: Call) => {
+          if (!mounted) return;
+          addLog(`Incoming call from ${call.parameters.From}`);
+          setCallStatus("incoming");
+          setCurrentCall(call);
+
+          call.on("disconnect", () => {
+            if (!mounted) return;
+            addLog("Call disconnected");
+            setCallStatus("ready");
+            setCurrentCall(null);
+          });
+
+          call.on("cancel", () => {
+             if (!mounted) return;
+             addLog("Call canceled");
+             setCallStatus("ready");
+             setCurrentCall(null);
+          });
+        });
+
+        await newDevice.register();
+        
+        if (mounted) {
+          activeDevice = newDevice;
+        } else {
+          newDevice.destroy();
+        }
+
+      } catch (err) {
+        if (!mounted) return;
+        const message = err instanceof Error ? err.message : String(err);
+        addLog(`Error initializing device: ${message}`);
+        setCallStatus("error");
+      }
+    };
+
+    void initDevice();
+
+    // Cleanup
+    return () => {
+      mounted = false;
+      if (activeDevice) {
+        addLog("Cleaning up device...");
+        activeDevice.destroy();
+      }
+    };
+  }, [selectedDispatcherId]);
+
+  const handleAccept = () => {
+    if (currentCall) {
+      addLog("Accepting call...");
+      currentCall.accept();
+      setCallStatus("connected");
+    }
+  };
+
+  const handleDecline = () => {
+    if (currentCall) {
+      addLog("Declining call...");
+      currentCall.reject();
+      setCallStatus("ready");
+      setCurrentCall(null);
+    }
+  };
+
+  const handleDisconnect = () => {
+    if (currentCall) {
+      addLog("Disconnecting call...");
+      currentCall.disconnect();
+      setCallStatus("ready");
+      setCurrentCall(null);
+    }
+  };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 bg-slate-50 text-slate-900">
-      <h1 className="text-4xl font-bold mb-8 text-blue-600">TIQN System Check</h1>
-      
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Dispatchers Check */}
-        <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200">
-          <h2 className="text-xl font-semibold mb-4 border-b pb-2">Dispatchers</h2>
-          {dispatchers ? (
-            <ul className="space-y-2">
-              {dispatchers.map((d) => (
-                <li key={d._id} className="flex justify-between items-center text-sm">
-                  <span className="font-medium">{d.name}</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">{d.phone ?? "N/A"}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-slate-400 text-sm">Loading...</p>
-          )}
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-50 text-gray-900">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-blue-600 p-6 text-white text-center">
+          <h1 className="text-2xl font-bold">Twilio Voice Agent</h1>
+          <p className="opacity-90 mt-1">{identity ? `Logged in as: ${identity}` : "Initializing..."}</p>
         </div>
 
-        {/* Incidents Check */}
-        <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200">
-          <h2 className="text-xl font-semibold mb-4 border-b pb-2">Active Incidents</h2>
-          {incidents ? (
-            <ul className="space-y-3">
-              {incidents.map((inc) => (
-                <li key={inc._id} className="text-sm">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-mono text-xs text-slate-500">{inc._id.slice(-8)}</span>
-                    <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded uppercase font-bold">{inc.priority}</span>
-                  </div>
-                  <div className="font-medium text-slate-800">{inc.incidentType}</div>
-                  <div className="text-xs text-slate-500 truncate">{inc.address ?? "N/A"}</div>
-                </li>
+        <div className="p-8 flex flex-col items-center gap-6">
+          {/* Dispatcher Selection */}
+          <div className="w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Dispatcher</label>
+            <select
+              className="w-full p-2 border rounded-md bg-white shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
+              value={selectedDispatcherId}
+              onChange={(e) => handleDispatcherChange(e.target.value)}
+            >
+              <option value="" disabled>Select a dispatcher...</option>
+              {dispatchers?.map((d) => (
+                <option key={d._id} value={d._id}>
+                  {d.name} {d.phone ? `(${d.phone})` : ""}
+                </option>
               ))}
-            </ul>
-          ) : (
-            <p className="text-slate-400 text-sm">Loading...</p>
-          )}
-        </div>
+            </select>
+          </div>
 
-        {/* Patients Check */}
-        <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200">
-          <h2 className="text-xl font-semibold mb-4 border-b pb-2">Patients</h2>
-          {patients ? (
-            <ul className="space-y-2">
-              {patients.map((p) => (
-                <li key={p._id} className="text-sm border-b border-slate-100 last:border-0 pb-2">
-                  <div className="font-medium">{p.firstName} {p.lastName}</div>
-                  <div className="text-xs text-slate-500">{p.rut ?? "No RUT"} • {p.age} yo</div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-slate-400 text-sm">Loading...</p>
-          )}
-        </div>
+          <div className={`text-xl font-semibold px-4 py-2 rounded-full ${
+            callStatus === 'incoming' ? 'bg-yellow-100 text-yellow-700 animate-pulse' :
+            callStatus === 'connected' ? 'bg-green-100 text-green-700' :
+            callStatus === 'ready' ? 'bg-gray-100 text-gray-600' :
+            'bg-red-100 text-red-700'
+          }`}>
+            Status: {callStatus.toUpperCase()}
+          </div>
 
-      </div>
-      
-      <div className="mt-12 text-sm text-slate-400">
-        Status: <span className="text-green-600 font-medium">System Operational</span> • Convex Connected
+          {callStatus === "incoming" && (
+            <div className="flex gap-4 w-full justify-center">
+              <button
+                onClick={handleAccept}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition shadow-md"
+              >
+                Accept
+              </button>
+              <button
+                onClick={handleDecline}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition shadow-md"
+              >
+                Decline
+              </button>
+            </div>
+          )}
+
+          {callStatus === "connected" && (
+            <div className="w-full">
+               <button
+                onClick={handleDisconnect}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md"
+              >
+                Hang Up
+              </button>
+            </div>
+          )}
+
+          <div className="w-full border-t pt-4 mt-2">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Logs</h3>
+            <div className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs font-mono h-48 overflow-y-auto">
+              {logs.length === 0 ? (
+                <span className="opacity-50">System logs will appear here...</span>
+              ) : (
+                logs.map((log, i) => <div key={i}>{log}</div>)
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

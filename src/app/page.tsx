@@ -23,7 +23,7 @@ export default function Home() {
               {dispatchers.map((d) => (
                 <li key={d._id} className="flex justify-between items-center text-sm">
                   <span className="font-medium">{d.name}</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">{d.badgeNumber}</span>
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">{d.phone ?? "N/A"}</span>
                 </li>
               ))}
             </ul>
@@ -40,11 +40,11 @@ export default function Home() {
               {incidents.map((inc) => (
                 <li key={inc._id} className="text-sm">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-mono text-xs text-slate-500">{inc.incidentNumber}</span>
+                    <span className="font-mono text-xs text-slate-500">{inc._id.slice(-8)}</span>
                     <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded uppercase font-bold">{inc.priority}</span>
                   </div>
                   <div className="font-medium text-slate-800">{inc.incidentType}</div>
-                  <div className="text-xs text-slate-500 truncate">{inc.location.address}</div>
+                  <div className="text-xs text-slate-500 truncate">{inc.address ?? "N/A"}</div>
                 </li>
               ))}
             </ul>
@@ -61,7 +61,7 @@ export default function Home() {
               {patients.map((p) => (
                 <li key={p._id} className="text-sm border-b border-slate-100 last:border-0 pb-2">
                   <div className="font-medium">{p.firstName} {p.lastName}</div>
-                  <div className="text-xs text-slate-500">{p.rut || "No RUT"} • {p.age} yo</div>
+                  <div className="text-xs text-slate-500">{p.rut ?? "No RUT"} • {p.age} yo</div>
                 </li>
               ))}
             </ul>

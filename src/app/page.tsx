@@ -32,13 +32,25 @@ export default function Home() {
 
   // Create mock dispatcher if none exist
   useEffect(() => {
-    if (dispatchers?.length === 0) {
+    if (dispatchers === undefined) return; // Loading
+
+    if (dispatchers.length === 0) {
       addLog("No dispatchers found. Creating mock dispatcher...");
       createDispatcher({ name: "Mock Dispatcher", phone: "+56912345678" })
-        .then((id) => addLog(`Created mock dispatcher: ${id}`))
+        .then((id) => {
+          addLog(`Created mock dispatcher: ${id}`);
+          handleDispatcherChange(id);
+        })
         .catch((e) => addLog(`Error creating mock dispatcher: ${e as string}`));
+    } else if (!selectedDispatcherId && dispatchers.length > 0) {
+      // Auto-select the first dispatcher if none selected
+      const first = dispatchers[0];
+      if (first) {
+        addLog(`Auto-selecting dispatcher: ${first.name}`);
+        handleDispatcherChange(first._id);
+      }
     }
-  }, [dispatchers, createDispatcher]);
+  }, [dispatchers, createDispatcher, selectedDispatcherId]);
 
   // Handle selection change
   const handleDispatcherChange = async (id: string) => {

@@ -59,6 +59,7 @@ export const createOrUpdate = mutation({
   },
   
   handler: async (ctx, args) => {
+    console.log("Calling incidents:createOrUpdate", args);
     const { callSessionId, dispatcherId, ...updateData } = args;
     
     // Try to find existing incident by session ID

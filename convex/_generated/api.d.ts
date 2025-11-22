@@ -9,7 +9,10 @@
  */
 
 import type * as init from "../init.js";
+import type * as rescuers from "../rescuers.js";
+import type * as seedTestData from "../seedTestData.js";
 import type * as tasks from "../tasks.js";
+import type * as testCreateAssignment from "../testCreateAssignment.js";
 import type * as verification from "../verification.js";
 
 import type {
@@ -20,7 +23,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   init: typeof init;
+  rescuers: typeof rescuers;
+  seedTestData: typeof seedTestData;
   tasks: typeof tasks;
+  testCreateAssignment: typeof testCreateAssignment;
   verification: typeof verification;
 }>;
 

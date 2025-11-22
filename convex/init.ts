@@ -14,6 +14,11 @@ export const seed = internalMutation({
     const rescuer1Id = await ctx.db.insert("rescuers", {
       name: "Jorge Silva",
       phone: "+56911112222",
+      currentLocation: {
+        lat: -33.4489,
+        lng: -70.6693,
+        lastUpdated: Date.now(),
+      },
       stats: {
         totalRescues: 45,
         avgResponseTime: 2.3,
@@ -23,6 +28,11 @@ export const seed = internalMutation({
     await ctx.db.insert("rescuers", {
       name: "Ana Torres",
       phone: "+56933334444",
+      currentLocation: {
+        lat: -33.4372,
+        lng: -70.6506,
+        lastUpdated: Date.now(),
+      },
       stats: {
         totalRescues: 112,
         avgResponseTime: 1.8,
@@ -85,6 +95,15 @@ export const seed = internalMutation({
         { offset: 2, speaker: "dispatcher", text: "TIQN Emergency Dispatch. State your emergency." },
         { offset: 5, speaker: "caller", text: "Please help! I think my father is having a heart attack..." },
       ],
+    });
+
+    // 6. Create a pending incident assignment for rescuers to see
+    await ctx.db.insert("incidentAssignments", {
+      incidentId: incidentId,
+      status: "pending",
+      times: {
+        offered: Date.now(),
+      },
     });
 
     return "Seed completed successfully with simplified schema!";

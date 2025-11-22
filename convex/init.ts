@@ -60,21 +60,21 @@ export const seed = internalMutation({
     });
 
     // 4. Create an Active Incident (Cardiac Arrest)
+    // Schema de main: campos planos de location, sin incidentNumber
     const incidentId = await ctx.db.insert("incidents", {
-      incidentNumber: "INC-2024-0892",
       status: "confirmed",
       priority: "critical",
       incidentType: "Cardiac Arrest Protocol",
       description: "Patient experiencing chest pain and difficulty breathing.",
-      location: {
-        address: "Av. Apoquindo 4500, Las Condes",
-        coordinates: {
-          lat: -33.410,
-          lng: -70.568,
-        },
+      address: "Av. Apoquindo 4500, Las Condes",
+      district: "Las Condes",
+      coordinates: {
+        lat: -33.410,
+        lng: -70.568,
       },
       dispatcherId: danielId,
       patientId: patientRobertoId,
+      lastUpdated: Date.now(),
     });
 
     // 5. Create the Call Record

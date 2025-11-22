@@ -21,6 +21,9 @@ export async function POST(request: Request) {
       const dispatcher = await convex.query(api.app_state.getActiveDispatcher);
       dispatcherId = dispatcher ?? undefined;
       console.log("Active dispatcher ID:", dispatcherId);
+      if (!dispatcherId) {
+        console.warn("No active dispatcher found in app_state. Check if a dispatcher was selected in the UI.");
+      }
     } catch (e) {
       console.error("Failed to fetch active dispatcher", e);
     }
@@ -38,7 +41,10 @@ export async function POST(request: Request) {
       const streamUrl = dispatcherId
         ? `${mediaStreamWssUrl}?dispatcher_id=${dispatcherId}`
         : mediaStreamWssUrl;
-        
+
+      console.log("Media Stream URL:", streamUrl);
+      console.log("Using dispatcher_id:", dispatcherId || "NOT SET - using fallback");
+
       const start = response.start();
       start.stream({
         url: streamUrl,

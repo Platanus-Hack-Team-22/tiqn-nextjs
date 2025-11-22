@@ -39,7 +39,7 @@ export default function Home() {
       createDispatcher({ name: "Mock Dispatcher", phone: "+56912345678" })
         .then((id) => {
           addLog(`Created mock dispatcher: ${id}`);
-          handleDispatcherChange(id);
+          void handleDispatcherChange(id);
         })
         .catch((e) => addLog(`Error creating mock dispatcher: ${e as string}`));
     } else if (!selectedDispatcherId && dispatchers.length > 0) {
@@ -47,7 +47,7 @@ export default function Home() {
       const first = dispatchers[0];
       if (first) {
         addLog(`Auto-selecting dispatcher: ${first.name}`);
-        handleDispatcherChange(first._id);
+        void handleDispatcherChange(first._id);
       }
     }
   }, [dispatchers, createDispatcher, selectedDispatcherId]);

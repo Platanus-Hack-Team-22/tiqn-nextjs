@@ -7,49 +7,26 @@ export const seed = internalMutation({
     // 1. Create Dispatcher (Daniel)
     const danielId = await ctx.db.insert("dispatchers", {
       name: "Daniel V.",
-      email: "daniel@tiqn.app",
-      badgeNumber: "D-001",
-      isActive: true,
-      createdAt: Date.now(),
+      phone: "+56912345678",
     });
 
     // 2. Create Rescuers
     const rescuer1Id = await ctx.db.insert("rescuers", {
       name: "Jorge Silva",
-      email: "jorge@tiqn.app",
       phone: "+56911112222",
-      badgeNumber: "R-2847",
-      status: "available",
-      currentLocation: {
-        lat: -33.408, // Near Las Condes
-        lng: -70.565,
-        lastUpdated: Date.now(),
-      },
       stats: {
         totalRescues: 45,
         avgResponseTime: 2.3,
       },
-      isActive: true,
-      createdAt: Date.now(),
     });
 
     await ctx.db.insert("rescuers", {
       name: "Ana Torres",
-      email: "ana@tiqn.app",
       phone: "+56933334444",
-      badgeNumber: "R-2899",
-      status: "on_call", // Busy
-      currentLocation: {
-        lat: -33.412,
-        lng: -70.570,
-        lastUpdated: Date.now(),
-      },
       stats: {
         totalRescues: 112,
         avgResponseTime: 1.8,
       },
-      isActive: true,
-      createdAt: Date.now(),
     });
 
     // 3. Create Patients (from sample logic or explicit insert)
@@ -96,25 +73,13 @@ export const seed = internalMutation({
           lng: -70.568,
         },
       },
-      times: {
-        callReceived: Date.now() - 1000 * 60 * 2, // 2 mins ago
-        confirmed: Date.now() - 1000 * 60 * 1,
-      },
-      estimates: {
-        distanceKm: 2.3,
-        etaMinutes: 3,
-      },
       dispatcherId: danielId,
       patientId: patientRobertoId,
     });
 
     // 5. Create the Call Record
     await ctx.db.insert("calls", {
-      twilioCallSid: "CA" + Math.random().toString(36).substring(7),
       incidentId: incidentId,
-      callerPhone: "+56912345678",
-      status: "in_progress",
-      startedAt: Date.now() - 1000 * 60 * 2,
       transcriptionChunks: [
         { offset: 0, speaker: "system", text: "Call started." },
         { offset: 2, speaker: "dispatcher", text: "TIQN Emergency Dispatch. State your emergency." },
@@ -122,7 +87,6 @@ export const seed = internalMutation({
       ],
     });
 
-    return "Seed completed successfully!";
+    return "Seed completed successfully with simplified schema!";
   },
 });
-

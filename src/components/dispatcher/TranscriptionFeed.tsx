@@ -21,7 +21,7 @@ export function TranscriptionFeed({ chunks = [], fullText }: TranscriptionFeedPr
 
   if (!displayText || displayText.trim().length === 0) {
     return (
-      <div className="text-center py-10 text-slate-400 text-xs font-mono">
+      <div className="text-center py-10 text-slate-400 text-sm font-mono">
         Establishing audio connection...
       </div>
     );
@@ -33,8 +33,8 @@ export function TranscriptionFeed({ chunks = [], fullText }: TranscriptionFeedPr
     const sortedChunks = [...chunks].sort((a, b) => a.offset - b.offset);
     
     return (
-      <div className="flex-1 p-4 overflow-y-auto bg-white scrollbar-hide">
-        <div className="space-y-2">
+      <div className="flex-1 p-6 overflow-y-auto bg-white scrollbar-hide">
+        <div className="space-y-4">
           {sortedChunks.map((chunk, index) => {
             const minutes = Math.floor(chunk.offset / 60);
             const seconds = Math.floor(chunk.offset % 60);
@@ -46,17 +46,17 @@ export function TranscriptionFeed({ chunks = [], fullText }: TranscriptionFeedPr
             return (
               <div
                 key={index}
-                className="animate-fade-in-up flex flex-col gap-1"
+                className="animate-fade-in-up flex flex-col gap-2 pb-3 border-b border-slate-100 last:border-b-0"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                  <span className="text-xs text-slate-400 font-mono shrink-0">
                     {timeLabel}
                   </span>
-                  <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider font-mono">
+                  <span className="text-xs text-slate-500 uppercase font-semibold tracking-wider font-mono">
                     {label}
                   </span>
                 </div>
-                <div className="text-xs leading-relaxed text-slate-900 ml-0">
+                <div className="text-base leading-relaxed text-slate-900 ml-0">
                   {chunk.text}
                 </div>
               </div>
@@ -69,8 +69,8 @@ export function TranscriptionFeed({ chunks = [], fullText }: TranscriptionFeedPr
 
   // Mostrar texto completo como párrafos
   return (
-    <div className="flex-1 p-4 overflow-y-auto bg-white scrollbar-hide">
-      <div className="text-xs leading-relaxed text-slate-900 whitespace-pre-wrap">
+    <div className="flex-1 p-6 overflow-y-auto bg-white scrollbar-hide">
+      <div className="text-base leading-relaxed text-slate-900 whitespace-pre-wrap">
         {displayText}
       </div>
     </div>

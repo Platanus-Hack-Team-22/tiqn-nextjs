@@ -253,11 +253,23 @@ export const getIncident = query({
         console.warn("Error reading call for incident:", args.incidentId, error);
       }
 
+      // Get incident assignment if exists
+      let assignment = null;
+      try {
+        assignment = await ctx.db
+          .query("incidentAssignments")
+          .withIndex("by_incident", (q) => q.eq("incidentId", args.incidentId))
+          .first();
+      } catch (error) {
+        console.warn("Error reading assignment for incident:", args.incidentId, error);
+      }
+
       return {
         ...incident,
         dispatcher,
         patient,
         call,
+        assignment,
       };
     } catch (error) {
       console.error("Error in getIncident:", error);
@@ -410,26 +422,20 @@ export const confirmEmergency = mutation({
       return { success: true, assignmentId: existing._id };
     }
 
-    // Para crear un assignment en pending, necesitamos un rescuer temporal
-    // En producción real, el backend creará assignments para cada rescuer disponible
-    // Por ahora, obtenemos el primer rescuer disponible
-    // Nota: Schema de main no tiene índice by_status en rescuers
-    const availableRescuer = await ctx.db.query("rescuers").first();
-
-    if (!availableRescuer) {
-      throw new Error("No available rescuers found");
-    }
-
-    // Crear IncidentAssignment en estado pending
-    // Nota: En producción, se crearán múltiples assignments (uno por rescuer disponible)
-    // Schema de main: times es opcional
+    // Crear IncidentAssignment en estado pending sin rescuerId
+    // Esto hace que la emergencia aparezca disponible para todos los rescatistas
+    // El rescuerId se asignará cuando un rescatista acepte la emergencia
+    // Schema permite rescuerId opcional - NO incluimos el campo en absoluto
     const assignmentId = await ctx.db.insert("incidentAssignments", {
       incidentId: args.incidentId,
-      rescuerId: availableRescuer._id,
       status: "pending",
       times: {
         offered: Date.now(),
       },
+    } as {
+      incidentId: any;
+      status: "pending";
+      times: { offered: number };
     });
 
     return { success: true, assignmentId };
@@ -524,6 +530,27 @@ export const createOrUpdate = mutation({
 
 // Alias for the Python backend which expects "create" (como en main)
 export const create = createOrUpdate;
+
+// Mutation: Finalizar llamada (End Call)
+export const endCall = mutation({
+  args: {
+    incidentId: v.id("incidents"),
+  },
+  handler: async (ctx, args) => {
+    const incident = await ctx.db.get(args.incidentId);
+    if (!incident) {
+      throw new Error("Incident not found");
+    }
+
+    // Cambiar status a completed
+    await ctx.db.patch(args.incidentId, {
+      status: "completed",
+      lastUpdated: Date.now(),
+    });
+
+    return { success: true, incidentId: args.incidentId };
+  },
+});
 
 // TEMPORAL: Limpia incidentes sin dispatcherId (solo desarrollo)
 export const fixOrphanedIncidents = mutation({

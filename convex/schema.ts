@@ -9,6 +9,7 @@ export default defineSchema({
 
   calls: defineTable({
     incidentId: v.id("incidents"),
+    callerPhone: v.optional(v.string()),
     transcription: v.optional(v.string()),
     transcriptionChunks: v.optional(
       v.array(

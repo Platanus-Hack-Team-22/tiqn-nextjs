@@ -19,7 +19,7 @@ function ActivityWave() {
         const next = [...prev.slice(1), Math.random() * 100];
         return next;
       });
-    }, 50);
+    }, 130); // Slower: changed from 50ms to 250ms
     return () => clearInterval(interval);
   }, []);
 
@@ -39,6 +39,8 @@ function ActivityWave() {
       })
       .join(" ") +
     ` L ${width} ${height} Z`;
+
+  const lastValue = data[data.length - 1] ?? 0;
 
   return (
     <div className="glass-card flex flex-col rounded-lg p-4">
@@ -70,7 +72,6 @@ function ActivityWave() {
             vectorEffect="non-scaling-stroke"
           />
         </svg>
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Device, type Call } from "@twilio/voice-sdk";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -41,7 +41,6 @@ export default function Home() {
   const [incidentApproved, setIncidentApproved] = useState(false);
   const [persistedIncident, setPersistedIncident] = useState<typeof incident>(null);
   const [showSkeletons, setShowSkeletons] = useState(false);
-  const [previousIncidentData, setPreviousIncidentData] = useState<Record<string, any>>({});
 
   // Calculate stats from recent incidents
   const stats = useMemo(() => {
@@ -70,18 +69,6 @@ export default function Home() {
     }
   }, [callStatus]);
 
-  // Track which fields just got filled (for animations)
-  useEffect(() => {
-    if (displayIncident) {
-      setPreviousIncidentData(prev => {
-        const newData: Record<string, any> = {};
-        Object.keys(displayIncident).forEach(key => {
-          newData[key] = displayIncident[key as keyof typeof displayIncident];
-        });
-        return newData;
-      });
-    }
-  }, [displayIncident]);
 
   // Persist incident data when it updates
   useEffect(() => {
@@ -384,7 +371,7 @@ export default function Home() {
                   <div className="space-y-3">
                     <DataField
                       label="Name"
-                      value={displayIncident?.firstName || displayIncident?.lastName ? `${displayIncident.firstName || ''} ${displayIncident.lastName || ''}`.trim() : null}
+                      value={displayIncident?.firstName ?? displayIncident?.lastName ? `${displayIncident.firstName ?? ''} ${displayIncident.lastName ?? ''}`.trim() : null}
                       isLoading={showSkeletons && !displayIncident?.firstName}
                       isCritical={true}
                     />

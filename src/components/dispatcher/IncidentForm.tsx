@@ -194,7 +194,7 @@ export function IncidentForm({ incidentType, location, patient, callerPhone }: I
                   type="text"
                   readOnly
                   className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 font-mono pl-9"
-                  value={callerPhone || patient?.phone || ""}
+                  value={callerPhone ?? patient?.phone ?? ""}
                   placeholder="N/A"
                 />
                 <svg

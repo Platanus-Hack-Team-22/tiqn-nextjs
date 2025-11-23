@@ -425,17 +425,13 @@ export const confirmEmergency = mutation({
     // Crear IncidentAssignment en estado pending sin rescuerId
     // Esto hace que la emergencia aparezca disponible para todos los rescatistas
     // El rescuerId se asignará cuando un rescatista acepte la emergencia
-    // Schema permite rescuerId opcional - NO incluimos el campo en absoluto
+    // Schema permite rescuerId opcional
     const assignmentId = await ctx.db.insert("incidentAssignments", {
       incidentId: args.incidentId,
       status: "pending",
       times: {
         offered: Date.now(),
       },
-    } as {
-      incidentId: any;
-      status: "pending";
-      times: { offered: number };
     });
 
     return { success: true, assignmentId };

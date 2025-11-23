@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
 export function DashboardCharts() {
   return (
@@ -19,7 +19,7 @@ function ActivityWave() {
         const next = [...prev.slice(1), Math.random() * 100];
         return next;
       });
-    }, 50);
+    }, 130); // Slower: changed from 50ms to 250ms
     return () => clearInterval(interval);
   }, []);
 
@@ -35,6 +35,8 @@ function ActivityWave() {
     return `L ${x} ${y}`;
   }).join(" ") + ` L ${width} ${height} Z`;
 
+  const lastValue = data[data.length - 1] ?? 0;
+
   return (
     <div className="glass-card flex flex-col rounded-lg p-4">
       <div className="mb-2 flex items-center justify-between">
@@ -42,7 +44,7 @@ function ActivityWave() {
           Net_Traffic
         </span>
         <span className="font-mono text-[10px] text-cyan-400">
-          {Math.round(data[data.length - 1])} MB/s
+          {Math.round(lastValue)} MB/s
         </span>
       </div>
       <div className="relative h-24 w-full overflow-hidden rounded bg-slate-900/50 border border-cyan-500/10">
@@ -55,7 +57,6 @@ function ActivityWave() {
           </defs>
           <path d={pathD} fill="url(#waveGradient)" stroke="rgba(6, 182, 212, 0.8)" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
         </svg>
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
       </div>
     </div>
   );
@@ -111,9 +112,7 @@ function ResourceRadar() {
           <line x1="50" y1="50" x2="15.4" y2="70" stroke="rgba(6,182,212,0.1)" strokeWidth="1" />
 
           {/* Data Shape */}
-          <polygon points={`${firePoint} ${policePoint} ${emsPoint}`} fill="rgba(6,182,212,0.3)" stroke="rgba(6,182,212,0.8)" strokeWidth="1.5">
-             <animate attributeName="points" duration="1s" />
-          </polygon>
+          <polygon points={`${firePoint} ${policePoint} ${emsPoint}`} fill="rgba(6,182,212,0.3)" stroke="rgba(6,182,212,0.8)" strokeWidth="1.5" className="transition-all duration-1000 ease-out" />
 
           {/* Labels */}
           <text x="50" y="8" textAnchor="middle" className="fill-red-400 text-[6px] font-mono">FIRE</text>

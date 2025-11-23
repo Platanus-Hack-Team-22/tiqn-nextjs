@@ -54,11 +54,8 @@ export function DataField({
       }
 
       let iteration = 0;
-      const maxIterations = 10; // How many times to scramble per character
-      let interval: NodeJS.Timeout;
-
-      interval = setInterval(() => {
-        setDisplayValue((prev) => {
+      const interval = setInterval(() => {
+        setDisplayValue((_prev) => {
           return finalValue
             .split("")
             .map((char, index) => {

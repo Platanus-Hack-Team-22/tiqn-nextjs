@@ -219,62 +219,72 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-8 text-gray-900">
-      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-lg">
-        <div className="bg-blue-600 p-6 text-center text-white">
-          <h1 className="text-2xl font-bold">Twilio Voice Agent</h1>
-          <p className="mt-1 opacity-90">
-            {identity ? `Logged in as: ${identity}` : "Initializing..."}
-          </p>
+    <main className="min-h-screen bg-slate-950 p-6 text-gray-100">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-8 border-b border-cyan-900/50 pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-light tracking-wide text-cyan-400">EMERGENCY DISPATCH SYSTEM</h1>
+              <p className="mt-1 font-mono text-sm text-gray-400">
+                {identity ? `OPERATOR: ${identity}` : "INITIALIZING..."}
+              </p>
+            </div>
+            <div className={`flex items-center gap-3 rounded border px-4 py-2 font-mono text-sm ${
+              callStatus === "incoming"
+                ? "animate-pulse border-amber-500/50 bg-amber-500/10 text-amber-400"
+                : callStatus === "connected"
+                  ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                  : callStatus === "ready"
+                    ? "border-gray-600/50 bg-gray-800/50 text-gray-400"
+                    : "border-red-500/50 bg-red-500/10 text-red-400"
+            }`}>
+              <div className={`h-2 w-2 rounded-full ${
+                callStatus === "incoming" ? "bg-amber-400 animate-pulse" :
+                callStatus === "connected" ? "bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" :
+                callStatus === "ready" ? "bg-gray-400" : "bg-red-400"
+              }`} />
+              STATUS: {callStatus.toUpperCase()}
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-col items-center gap-6 p-8">
-          {/* Dispatcher Selection */}
-          <div className="w-full">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Select Dispatcher
-            </label>
-            <select
-              className="w-full rounded-md border bg-white p-2 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
-              value={selectedDispatcherId}
-              onChange={(e) => handleDispatcherChange(e.target.value)}
-            >
-              <option value="" disabled>
-                Select a dispatcher...
-              </option>
-              {dispatchers?.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.name} {d.phone ? `(${d.phone})` : ""}
+        <div className="flex flex-col gap-6">
+          {/* Dispatcher Selection - Only show when not connected */}
+          {callStatus !== "connected" && (
+            <div className="w-full max-w-md">
+              <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-gray-400">
+                Dispatcher
+              </label>
+              <select
+                className="w-full rounded border border-gray-700 bg-slate-900 p-3 font-mono text-sm text-gray-100 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                value={selectedDispatcherId}
+                onChange={(e) => handleDispatcherChange(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select a dispatcher...
                 </option>
-              ))}
-            </select>
-          </div>
+                {dispatchers?.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.name} {d.phone ? `(${d.phone})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          <div
-            className={`rounded-full px-4 py-2 text-xl font-semibold ${
-              callStatus === "incoming"
-                ? "animate-pulse bg-yellow-100 text-yellow-700"
-                : callStatus === "connected"
-                  ? "bg-green-100 text-green-700"
-                  : callStatus === "ready"
-                    ? "bg-gray-100 text-gray-600"
-                    : "bg-red-100 text-red-700"
-            }`}
-          >
-            Status: {callStatus.toUpperCase()}
-          </div>
-
+          {/* Call Controls */}
           {callStatus === "incoming" && (
-            <div className="flex w-full justify-center gap-4">
+            <div className="flex gap-4">
               <button
                 onClick={handleAccept}
-                className="flex-1 rounded-lg bg-green-500 px-6 py-3 font-bold text-white shadow-md transition hover:bg-green-600"
+                className="flex-1 rounded border border-cyan-500/50 bg-cyan-500/10 px-8 py-4 font-mono text-sm uppercase tracking-wide text-cyan-400 transition hover:bg-cyan-500/20 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
               >
-                Accept
+                Accept Call
               </button>
               <button
                 onClick={handleDecline}
-                className="flex-1 rounded-lg bg-red-500 px-6 py-3 font-bold text-white shadow-md transition hover:bg-red-600"
+                className="flex-1 rounded border border-red-500/50 bg-red-500/10 px-8 py-4 font-mono text-sm uppercase tracking-wide text-red-400 transition hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]"
               >
                 Decline
               </button>
@@ -282,101 +292,209 @@ export default function Home() {
           )}
 
           {callStatus === "connected" && (
-            <div className="w-full">
+            <div className="flex gap-4">
               <button
                 onClick={handleDisconnect}
-                className="w-full rounded-lg bg-red-600 px-6 py-3 font-bold text-white shadow-md transition hover:bg-red-700"
+                className="rounded border border-red-500/50 bg-red-500/10 px-8 py-3 font-mono text-sm uppercase tracking-wide text-red-400 transition hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]"
               >
-                Hang Up
+                End Call
               </button>
-            </div>
-          )}
-
-          {callStatus === "connected" && incident && !incidentApproved && (
-            <div className="w-full">
-              <button
-                onClick={handleApproveIncident}
-                className="w-full rounded-lg bg-yellow-500 px-6 py-3 font-bold text-white shadow-md transition hover:bg-yellow-600"
-              >
-                Approve This Incident
-              </button>
-            </div>
-          )}
-
-          {callStatus === "connected" && incident && incidentApproved && (
-            <div className="w-full rounded-lg bg-green-100 border border-green-300 px-4 py-2 text-center">
-              <span className="text-green-700 font-semibold">✓ Incident Approved</span>
-            </div>
-          )}
-
-          {callStatus === "connected" && incident && (
-            <div className="w-full space-y-3">
-              <h3 className="text-sm font-medium text-gray-700">Incident Data</h3>
-
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                <h4 className="mb-2 text-xs font-semibold uppercase text-blue-700">Patient Info</h4>
-                <div className="space-y-1 text-sm">
-                  {incident.firstName || incident.lastName ? (
-                    <div><span className="font-medium">Name:</span> {incident.firstName} {incident.lastName}</div>
-                  ) : <div className="text-gray-400 italic">Name: Not provided</div>}
-                  {incident.patientAge && <div><span className="font-medium">Age:</span> {incident.patientAge}</div>}
-                  {incident.patientSex && <div><span className="font-medium">Sex:</span> {incident.patientSex}</div>}
-                  {incident.consciousness && <div><span className="font-medium">Consciousness:</span> {incident.consciousness}</div>}
-                  {incident.breathing && <div><span className="font-medium">Breathing:</span> {incident.breathing}</div>}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                <h4 className="mb-2 text-xs font-semibold uppercase text-green-700">Location</h4>
-                <div className="space-y-1 text-sm">
-                  {incident.address ? (
-                    <div><span className="font-medium">Address:</span> {incident.address}</div>
-                  ) : <div className="text-gray-400 italic">Address: Not provided</div>}
-                  {incident.district && <div><span className="font-medium">District:</span> {incident.district}</div>}
-                  {incident.apartment && <div><span className="font-medium">Apt/Unit:</span> {incident.apartment}</div>}
-                  {incident.reference && <div><span className="font-medium">Reference:</span> {incident.reference}</div>}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
-                <h4 className="mb-2 text-xs font-semibold uppercase text-orange-700">Medical Status</h4>
-                <div className="space-y-1 text-sm">
-                  {incident.avdi && <div><span className="font-medium">AVDI:</span> {incident.avdi}</div>}
-                  {incident.respiratoryStatus && <div><span className="font-medium">Respiratory:</span> {incident.respiratoryStatus}</div>}
-                  {incident.symptomOnset && <div><span className="font-medium">Symptom Onset:</span> {incident.symptomOnset}</div>}
-                  {incident.medicalHistory && <div><span className="font-medium">History:</span> {incident.medicalHistory}</div>}
-                  {incident.currentMedications && <div><span className="font-medium">Medications:</span> {incident.currentMedications}</div>}
-                  {incident.allergies && <div><span className="font-medium">Allergies:</span> {incident.allergies}</div>}
-                  {incident.vitalSigns && <div><span className="font-medium">Vital Signs:</span> {incident.vitalSigns}</div>}
-                  {!incident.avdi && !incident.respiratoryStatus && !incident.symptomOnset && !incident.medicalHistory && !incident.currentMedications && !incident.allergies && !incident.vitalSigns && (
-                    <div className="text-gray-400 italic">Extracting medical data...</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <h4 className="mb-2 text-xs font-semibold uppercase text-gray-700">Call Transcript</h4>
-                <div className="max-h-40 overflow-y-auto rounded bg-white p-2 text-sm">
-                  {incident.fullTranscript ? (
-                    <div className="whitespace-pre-wrap font-mono text-xs">{incident.fullTranscript}</div>
-                  ) : (
-                    <div className="text-gray-400 italic">Waiting for transcript...</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-2 w-full border-t pt-4">
-            <h3 className="mb-2 text-sm font-medium text-gray-500">Logs</h3>
-            <div className="h-48 overflow-y-auto rounded-lg bg-gray-900 p-4 font-mono text-xs text-green-400">
-              {logs.length === 0 ? (
-                <span className="opacity-50">
-                  System logs will appear here...
-                </span>
-              ) : (
-                logs.map((log, i) => <div key={i}>{log}</div>)
+              {incident && !incidentApproved && (
+                <button
+                  onClick={handleApproveIncident}
+                  className="rounded border border-amber-500/50 bg-amber-500/10 px-8 py-3 font-mono text-sm uppercase tracking-wide text-amber-400 transition hover:bg-amber-500/20 hover:shadow-[0_0_20px_rgba(251,191,36,0.4)]"
+                >
+                  Approve Emergency
+                </button>
               )}
+              {incident && incidentApproved && (
+                <div className="flex items-center gap-2 rounded border border-cyan-500/50 bg-cyan-500/10 px-6 py-3">
+                  <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+                  <span className="font-mono text-sm uppercase tracking-wide text-cyan-400">Emergency Approved</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Two-Column Layout for Incident Data */}
+          {callStatus === "connected" && incident && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+              {/* Left Column: Patient & Location Data (40%) */}
+              <div className="space-y-6 lg:col-span-2">
+                {/* Patient Vitals */}
+                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                    Patient Vitals
+                  </h4>
+                  <div className="space-y-3 font-mono text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Name:</span>
+                      <span className="text-gray-100">
+                        {incident.firstName || incident.lastName
+                          ? `${incident.firstName || ''} ${incident.lastName || ''}`.trim()
+                          : <span className="text-gray-600 italic">Unknown</span>
+                        }
+                      </span>
+                    </div>
+                    {incident.patientAge && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Age:</span>
+                        <span className="text-gray-100">{incident.patientAge}</span>
+                      </div>
+                    )}
+                    {incident.patientSex && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Sex:</span>
+                        <span className="text-gray-100">{incident.patientSex}</span>
+                      </div>
+                    )}
+                    {incident.consciousness && (
+                      <div className="flex justify-between border-t border-cyan-500/10 pt-3">
+                        <span className="text-gray-500">Consciousness:</span>
+                        <span className="text-cyan-300">{incident.consciousness}</span>
+                      </div>
+                    )}
+                    {incident.breathing && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Breathing:</span>
+                        <span className="text-cyan-300">{incident.breathing}</span>
+                      </div>
+                    )}
+                    {incident.avdi && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">AVDI:</span>
+                        <span className="text-cyan-300">{incident.avdi}</span>
+                      </div>
+                    )}
+                    {incident.respiratoryStatus && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Respiratory:</span>
+                        <span className="text-cyan-300">{incident.respiratoryStatus}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                    Location
+                  </h4>
+                  <div className="space-y-3 font-mono text-sm">
+                    <div>
+                      <span className="text-gray-500">Address:</span>
+                      <div className="mt-1 text-gray-100">
+                        {incident.address || <span className="text-gray-600 italic">Not provided</span>}
+                      </div>
+                    </div>
+                    {incident.district && (
+                      <div>
+                        <span className="text-gray-500">District:</span>
+                        <div className="mt-1 text-gray-100">{incident.district}</div>
+                      </div>
+                    )}
+                    {incident.apartment && (
+                      <div>
+                        <span className="text-gray-500">Apt/Unit:</span>
+                        <div className="mt-1 text-gray-100">{incident.apartment}</div>
+                      </div>
+                    )}
+                    {incident.reference && (
+                      <div>
+                        <span className="text-gray-500">Reference:</span>
+                        <div className="mt-1 text-gray-100">{incident.reference}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Medical Details */}
+                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                    Medical Info
+                  </h4>
+                  <div className="space-y-3 font-mono text-xs">
+                    {incident.symptomOnset && (
+                      <div>
+                        <span className="text-gray-500">Symptom Onset:</span>
+                        <div className="mt-1 text-gray-100">{incident.symptomOnset}</div>
+                      </div>
+                    )}
+                    {incident.medicalHistory && (
+                      <div>
+                        <span className="text-gray-500">History:</span>
+                        <div className="mt-1 text-gray-100">{incident.medicalHistory}</div>
+                      </div>
+                    )}
+                    {incident.currentMedications && (
+                      <div>
+                        <span className="text-gray-500">Medications:</span>
+                        <div className="mt-1 text-gray-100">{incident.currentMedications}</div>
+                      </div>
+                    )}
+                    {incident.allergies && (
+                      <div>
+                        <span className="text-gray-500">Allergies:</span>
+                        <div className="mt-1 text-amber-300">{incident.allergies}</div>
+                      </div>
+                    )}
+                    {incident.vitalSigns && (
+                      <div>
+                        <span className="text-gray-500">Vital Signs:</span>
+                        <div className="mt-1 text-gray-100">{incident.vitalSigns}</div>
+                      </div>
+                    )}
+                    {!incident.symptomOnset && !incident.medicalHistory && !incident.currentMedications && !incident.allergies && !incident.vitalSigns && (
+                      <div className="text-gray-600 italic">Extracting medical data...</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Transcript (60%) */}
+              <div className="lg:col-span-3">
+                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                    Live Transcript
+                  </h4>
+                  <div className="h-[600px] overflow-y-auto rounded border border-cyan-500/10 bg-black/50 p-4">
+                    {incident.fullTranscript ? (
+                      <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-cyan-100/90">
+                        {incident.fullTranscript}
+                      </pre>
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <div className="text-center">
+                          <div className="mb-2 h-3 w-3 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
+                          <p className="font-mono text-sm text-gray-600 italic">Waiting for transcript...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* System Logs */}
+          <div className="mt-6 w-full">
+            <div className="rounded border border-gray-700/50 bg-slate-900/30 p-4">
+              <h3 className="mb-3 border-b border-gray-700/50 pb-2 font-mono text-xs uppercase tracking-wider text-gray-500">
+                System Logs
+              </h3>
+              <div className="h-32 overflow-y-auto rounded border border-gray-800/50 bg-black/30 p-3 font-mono text-xs text-cyan-500/70">
+                {logs.length === 0 ? (
+                  <span className="text-gray-700 italic">
+                    System logs will appear here...
+                  </span>
+                ) : (
+                  logs.map((log, i) => (
+                    <div key={i} className="mb-1 opacity-80 hover:opacity-100">
+                      {log}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

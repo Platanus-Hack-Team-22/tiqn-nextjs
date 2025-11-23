@@ -353,6 +353,17 @@ export default function Home() {
                   )}
                 </div>
               </div>
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase text-gray-700">Call Transcript</h4>
+                <div className="max-h-40 overflow-y-auto rounded bg-white p-2 text-sm">
+                  {incident.fullTranscript ? (
+                    <div className="whitespace-pre-wrap font-mono text-xs">{incident.fullTranscript}</div>
+                  ) : (
+                    <div className="text-gray-400 italic">Waiting for transcript...</div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

@@ -13,14 +13,17 @@ export function EmergencyConfirmationPopup({
 }: EmergencyConfirmationPopupProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setIsConfirming(true);
     try {
-      onConfirm();
+      await onConfirm();
+    } catch (error) {
+      console.error("Error confirming emergency:", error);
     } finally {
       setIsConfirming(false);
     }
   };
+
 
   return (
     <div className="absolute bottom-6 right-6 w-96 bg-white border border-red-300 rounded-lg shadow-2xl shadow-red-500/20 z-50 flex flex-col animate-fade-in-up">
@@ -73,7 +76,9 @@ export function EmergencyConfirmationPopup({
             Cancelar
           </button>
           <button
-            onClick={handleConfirm}
+            onClick={() => {
+              void handleConfirm();
+            }}
             disabled={isConfirming}
             className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded text-xs font-semibold transition flex items-center justify-center gap-1.5 uppercase tracking-wider border border-red-700 disabled:opacity-75"
           >

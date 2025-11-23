@@ -28,12 +28,14 @@ export default function Home() {
     api.incidents.get,
     appState?.activeIncidentId ? { id: appState.activeIncidentId } : "skip"
   );
+  const createPendingAssignment = useMutation(api.incidentAssignments.createPendingAssignment);
 
   const [currentCall, setCurrentCall] = useState<Call | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("initializing");
   const [identity, setIdentity] = useState<string>("");
   const [logs, setLogs] = useState<string[]>([]);
   const [selectedDispatcherId, setSelectedDispatcherId] = useState<string>("");
+  const [incidentApproved, setIncidentApproved] = useState(false);
 
   const addLog = useCallback((msg: string) => {
     const time =
@@ -133,6 +135,7 @@ export default function Home() {
             addLog("Call disconnected");
             setCallStatus("ready");
             setCurrentCall(null);
+            setIncidentApproved(false);
           });
 
           call.on("cancel", () => {
@@ -140,6 +143,7 @@ export default function Home() {
             addLog("Call canceled");
             setCallStatus("ready");
             setCurrentCall(null);
+            setIncidentApproved(false);
           });
         });
 
@@ -184,6 +188,7 @@ export default function Home() {
       currentCall.reject();
       setCallStatus("ready");
       setCurrentCall(null);
+      setIncidentApproved(false);
     }
   };
 
@@ -193,6 +198,23 @@ export default function Home() {
       currentCall.disconnect();
       setCallStatus("ready");
       setCurrentCall(null);
+      setIncidentApproved(false);
+    }
+  };
+
+  const handleApproveIncident = async () => {
+    if (!incident?._id) {
+      addLog("No incident to approve");
+      return;
+    }
+
+    try {
+      addLog("Approving incident as true emergency...");
+      await createPendingAssignment({ incidentId: incident._id });
+      setIncidentApproved(true);
+      addLog("Incident approved! Assignment created with pending status.");
+    } catch (e) {
+      addLog(`Error approving incident: ${e as string}`);
     }
   };
 
@@ -267,6 +289,23 @@ export default function Home() {
               >
                 Hang Up
               </button>
+            </div>
+          )}
+
+          {callStatus === "connected" && incident && !incidentApproved && (
+            <div className="w-full">
+              <button
+                onClick={handleApproveIncident}
+                className="w-full rounded-lg bg-yellow-500 px-6 py-3 font-bold text-white shadow-md transition hover:bg-yellow-600"
+              >
+                Approve This Incident
+              </button>
+            </div>
+          )}
+
+          {callStatus === "connected" && incident && incidentApproved && (
+            <div className="w-full rounded-lg bg-green-100 border border-green-300 px-4 py-2 text-center">
+              <span className="text-green-700 font-semibold">✓ Incident Approved</span>
             </div>
           )}
 

@@ -88,21 +88,22 @@ export default defineSchema({
   // INCIDENTS (Emergencies)
   // --------------------------------------------------------------------------
   incidents: defineTable({
-    // Status & Priority
-    status: v.union(
+    // Status & Priority - OPTIONAL because Python may not always send them
+    status: v.optional(v.union(
       v.literal("incoming_call"),
       v.literal("confirmed"),
       v.literal("rescuer_assigned"),
       v.literal("in_progress"),
       v.literal("completed"),
-      v.literal("cancelled")
-    ),
-    priority: v.union(
+      v.literal("cancelled"),
+      v.literal("active") // Added for Python backend compatibility
+    )),
+    priority: v.optional(v.union(
       v.literal("low"),
       v.literal("medium"),
       v.literal("high"),
       v.literal("critical")
-    ),
+    )),
 
     // Basic Info
     incidentType: v.optional(v.string()),
@@ -120,11 +121,13 @@ export default defineSchema({
     ),
 
     // Relationships
-    dispatcherId: v.id("dispatchers"),
+    dispatcherId: v.union(v.id("dispatchers"), v.string()), // Accept both ID and string from Python
     patientId: v.optional(v.id("patients")),
 
     // Real-time call tracking (from Python AI extraction)
     callSessionId: v.optional(v.string()),
+    externalCallId: v.optional(v.string()), // Alias for callSessionId (Python backend uses this)
+    liveTranscript: v.optional(v.string()), // Real-time interim transcript updates
     lastUpdated: v.optional(v.number()),
 
     // Patient info (extracted during call)
@@ -164,7 +167,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_dispatcher", ["dispatcherId"])
     .index("by_patient", ["patientId"])
-    .index("by_session", ["callSessionId"]),
+    .index("by_session", ["callSessionId"])
+    .index("by_externalCallId", ["externalCallId"]),
 
   // --------------------------------------------------------------------------
   // CALLS (Twilio integration)

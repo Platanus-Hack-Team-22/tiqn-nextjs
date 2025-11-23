@@ -24,6 +24,7 @@ export function EmergencyConfirmationPopup({
     }
   };
 
+
   return (
     <div className="absolute bottom-6 right-6 w-96 bg-white border border-red-300 rounded-lg shadow-2xl shadow-red-500/20 z-50 flex flex-col animate-fade-in-up">
       <div className="bg-gradient-to-r from-red-600 to-red-700 px-3 py-2 rounded-t-lg flex justify-between items-center border-b border-red-800">

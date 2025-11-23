@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Device, type Call } from "@twilio/voice-sdk";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { DataField } from "../components/DataField";
+import { DashboardCharts } from "../components/DashboardCharts";
 
 type CallStatus =
   | "initializing"
@@ -38,6 +40,48 @@ export default function Home() {
   const [selectedDispatcherId, setSelectedDispatcherId] = useState<string>("");
   const [incidentApproved, setIncidentApproved] = useState(false);
   const [persistedIncident, setPersistedIncident] = useState<typeof incident>(null);
+  const [showSkeletons, setShowSkeletons] = useState(false);
+  const [previousIncidentData, setPreviousIncidentData] = useState<Record<string, any>>({});
+
+  // Calculate stats from recent incidents
+  const stats = useMemo(() => {
+    if (!recentIncidents) return { active: 0, critical: 0, units: 0, total: 0 };
+    
+    return {
+      active: recentIncidents.filter(i => ["confirmed", "rescuer_assigned", "in_progress"].includes(i.status)).length,
+      critical: recentIncidents.filter(i => i.priority === "critical" && ["confirmed", "rescuer_assigned", "in_progress"].includes(i.status)).length,
+      units: recentIncidents.filter(i => ["rescuer_assigned", "in_progress"].includes(i.status)).length,
+      total: recentIncidents.length
+    };
+  }, [recentIncidents]);
+
+  // Use active incident if available, otherwise show persisted data
+  const displayIncident = incident ?? persistedIncident;
+
+  // Show skeleton loaders after 2 seconds of accepting call
+  useEffect(() => {
+    if (callStatus === "connected") {
+      const timer = setTimeout(() => {
+        setShowSkeletons(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSkeletons(false);
+    }
+  }, [callStatus]);
+
+  // Track which fields just got filled (for animations)
+  useEffect(() => {
+    if (displayIncident) {
+      setPreviousIncidentData(prev => {
+        const newData: Record<string, any> = {};
+        Object.keys(displayIncident).forEach(key => {
+          newData[key] = displayIncident[key as keyof typeof displayIncident];
+        });
+        return newData;
+      });
+    }
+  }, [displayIncident]);
 
   // Persist incident data when it updates
   useEffect(() => {
@@ -45,9 +89,6 @@ export default function Home() {
       setPersistedIncident(incident);
     }
   }, [incident]);
-
-  // Use active incident if available, otherwise show persisted data
-  const displayIncident = incident ?? persistedIncident;
 
   const addLog = useCallback((msg: string) => {
     const time =
@@ -231,7 +272,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-gray-100">
+    <main className="min-h-screen bg-slate-950 bg-grid-pattern p-6 text-gray-100">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8 border-b border-cyan-900/50 pb-6">
@@ -336,164 +377,199 @@ export default function Home() {
               {/* Left Column: Patient & Location Data (40%) */}
               <div className="space-y-6 lg:col-span-2">
                 {/* Patient Vitals */}
-                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                <div className="glass-card rounded-lg p-5">
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
                     Patient Vitals
                   </h4>
-                  <div className="space-y-3 font-mono text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Name:</span>
-                      <span className="text-gray-100">
-                        {displayIncident?.firstName ?? displayIncident?.lastName
-                          ? `${displayIncident?.firstName ?? ''} ${displayIncident?.lastName ?? ''}`.trim()
-                          : <span className="text-gray-600 italic">-</span>
-                        }
-                      </span>
+                  <div className="space-y-3">
+                    <DataField
+                      label="Name"
+                      value={displayIncident?.firstName || displayIncident?.lastName ? `${displayIncident.firstName || ''} ${displayIncident.lastName || ''}`.trim() : null}
+                      isLoading={showSkeletons && !displayIncident?.firstName}
+                      isCritical={true}
+                    />
+                    <DataField
+                      label="Age"
+                      value={displayIncident?.patientAge}
+                      isLoading={showSkeletons && !displayIncident?.patientAge}
+                    />
+                    <DataField
+                      label="Sex"
+                      value={displayIncident?.patientSex}
+                      isLoading={showSkeletons && !displayIncident?.patientSex}
+                    />
+                    <div className="border-t border-cyan-500/10 pt-3">
+                      <DataField
+                        label="Consciousness"
+                        value={displayIncident?.consciousness}
+                        isLoading={showSkeletons && !displayIncident?.consciousness}
+                        className={displayIncident?.consciousness ? "text-cyan-300" : ""}
+                      />
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Age:</span>
-                      <span className="text-gray-100">
-                        {displayIncident?.patientAge ?? <span className="text-gray-600 italic">-</span>}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Sex:</span>
-                      <span className="text-gray-100">
-                        {displayIncident?.patientSex ?? <span className="text-gray-600 italic">-</span>}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-cyan-500/10 pt-3">
-                      <span className="text-gray-500">Consciousness:</span>
-                      <span className={displayIncident?.consciousness ? "text-cyan-300" : "text-gray-600 italic"}>
-                        {displayIncident?.consciousness ?? '-'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Breathing:</span>
-                      <span className={displayIncident?.breathing ? "text-cyan-300" : "text-gray-600 italic"}>
-                        {displayIncident?.breathing ?? '-'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">AVDI:</span>
-                      <span className={displayIncident?.avdi ? "text-cyan-300" : "text-gray-600 italic"}>
-                        {displayIncident?.avdi ?? '-'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Respiratory:</span>
-                      <span className={displayIncident?.respiratoryStatus ? "text-cyan-300" : "text-gray-600 italic"}>
-                        {displayIncident?.respiratoryStatus ?? '-'}
-                      </span>
-                    </div>
+                    <DataField
+                      label="Breathing"
+                      value={displayIncident?.breathing}
+                      isLoading={showSkeletons && !displayIncident?.breathing}
+                    />
+                    <DataField
+                      label="AVDI"
+                      value={displayIncident?.avdi}
+                      isLoading={showSkeletons && !displayIncident?.avdi}
+                    />
+                    <DataField
+                      label="Respiratory"
+                      value={displayIncident?.respiratoryStatus}
+                      isLoading={showSkeletons && !displayIncident?.respiratoryStatus}
+                    />
                   </div>
                 </div>
 
                 {/* Location */}
-                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                <div className="glass-card rounded-lg p-5">
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
                     Location
                   </h4>
-                  <div className="space-y-3 font-mono text-sm">
-                    <div>
-                      <span className="text-gray-500">Address:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.address ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">District:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.district ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Apt/Unit:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.apartment ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Reference:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.reference ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
+                  <div className="space-y-3">
+                    <DataField
+                      label="Address"
+                      value={displayIncident?.address}
+                      isLoading={showSkeletons && !displayIncident?.address}
+                      isCritical={true}
+                    />
+                    <DataField
+                      label="District"
+                      value={displayIncident?.district}
+                      isLoading={showSkeletons && !displayIncident?.district}
+                    />
+                    <DataField
+                      label="Apt/Unit"
+                      value={displayIncident?.apartment}
+                      isLoading={showSkeletons && !displayIncident?.apartment}
+                    />
+                    <DataField
+                      label="Reference"
+                      value={displayIncident?.reference}
+                      isLoading={showSkeletons && !displayIncident?.reference}
+                    />
                   </div>
                 </div>
 
                 {/* Medical Details */}
-                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+                <div className="glass-card rounded-lg p-5">
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
                     Medical Info
                   </h4>
-                  <div className="space-y-3 font-mono text-xs">
-                    <div>
-                      <span className="text-gray-500">Symptom Onset:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.symptomOnset ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">History:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.medicalHistory ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Medications:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.currentMedications ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Allergies:</span>
-                      <div className={displayIncident?.allergies ? "mt-1 text-amber-300" : "mt-1 text-gray-600 italic"}>
-                        {displayIncident?.allergies ?? '-'}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Vital Signs:</span>
-                      <div className="mt-1 text-gray-100">
-                        {displayIncident?.vitalSigns ?? <span className="text-gray-600 italic">-</span>}
-                      </div>
-                    </div>
+                  <div className="space-y-3">
+                    <DataField
+                      label="Symptom Onset"
+                      value={displayIncident?.symptomOnset}
+                      isLoading={showSkeletons && !displayIncident?.symptomOnset}
+                    />
+                    <DataField
+                      label="History"
+                      value={displayIncident?.medicalHistory}
+                      isLoading={showSkeletons && !displayIncident?.medicalHistory}
+                    />
+                    <DataField
+                      label="Medications"
+                      value={displayIncident?.currentMedications}
+                      isLoading={showSkeletons && !displayIncident?.currentMedications}
+                    />
+                    <DataField
+                      label="Allergies"
+                      value={displayIncident?.allergies}
+                      isLoading={showSkeletons && !displayIncident?.allergies}
+                      className={displayIncident?.allergies ? "text-amber-300" : ""}
+                    />
+                    <DataField
+                      label="Vital Signs"
+                      value={displayIncident?.vitalSigns}
+                      isLoading={showSkeletons && !displayIncident?.vitalSigns}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Right Column: Live Transcript (60%) */}
               <div className="lg:col-span-3">
-                <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
-                    {callStatus === "connected" ? "Live Transcript" : "Call Transcript"}
-                  </h4>
-                  <div className="h-[600px] overflow-y-auto rounded border border-cyan-500/10 bg-black/50 p-6">
-                    {displayIncident?.fullTranscript ? (
-                      <div className="space-y-4">
-                        {displayIncident.fullTranscript.split('\n').filter(line => line.trim()).map((line, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded-lg border-l-4 border-cyan-500/30 bg-slate-800/30 p-4 text-base leading-relaxed text-gray-100"
-                          >
-                            {line.trim()}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <div className="text-center">
-                          {callStatus === "connected" ? (
-                            <>
-                              <div className="mb-2 h-3 w-3 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
-                              <p className="font-mono text-sm text-gray-600 italic">Waiting for transcript...</p>
-                            </>
-                          ) : (
-                            <p className="font-mono text-sm text-gray-600 italic">No transcript available</p>
-                          )}
+                <div className="glass-card flex h-full flex-col rounded-lg p-1 shadow-[0_0_30px_rgba(6,182,212,0.05)]">
+                  <div className="border-b border-cyan-500/20 p-4">
+                     <div className="flex items-center justify-between">
+                      <h4 className="font-mono text-xs uppercase tracking-wider text-cyan-400">
+                        {callStatus === "connected" ? "Live Audio Feed" : "Transcript Log"}
+                      </h4>
+                      {callStatus === "connected" && (
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+                          <span className="font-mono text-[10px] text-red-400">RECORDING</span>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="relative flex-1 overflow-hidden bg-slate-950/50 p-6">
+                    {/* Fade out mask at top */}
+                    <div className="pointer-events-none absolute left-0 top-0 z-10 h-12 w-full bg-gradient-to-b from-slate-950 to-transparent" />
+                    
+                    <div className="h-[600px] space-y-4 overflow-y-auto pr-2">
+                      {displayIncident?.fullTranscript ? (
+                        <>
+                          {(() => {
+                            // Separar por frases (punto seguido de espacio o punto final)
+                            const sentences = displayIncident.fullTranscript
+                              .split(/(?<=[.!?])\s+/)
+                              .filter(s => s.trim());
+
+                            // Agrupar cada 2 frases como un "mensaje"
+                            const messages = [];
+                            for (let i = 0; i < sentences.length; i += 2) {
+                              const message = sentences.slice(i, i + 2).join(' ');
+                              if (message.trim()) messages.push(message);
+                            }
+
+                            return messages.map((message, idx) => (
+                              <div
+                                key={idx}
+                                className={`animate-fade-in-up relative rounded-xl border border-cyan-500/10 bg-slate-900/80 p-4 backdrop-blur-md transition-all hover:border-cyan-500/30 hover:bg-slate-800/80 ${
+                                  idx === messages.length - 1 ? "border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]" : ""
+                                }`}
+                              >
+                                {/* Message Index/Time decoration */}
+                                <div className="absolute -left-3 top-4 flex items-center">
+                                  <div className="h-px w-3 bg-cyan-500/30" />
+                                  <div className={`h-1.5 w-1.5 rounded-full ${
+                                    idx === messages.length - 1 ? "animate-pulse bg-cyan-400" : "bg-cyan-900"
+                                  }`} />
+                                </div>
+                                
+                                <p className="font-mono text-sm leading-relaxed text-gray-300">
+                                  {message.trim()}
+                                </p>
+                              </div>
+                            ));
+                          })()}
+                          {/* Scrolling anchor */}
+                          <div className="h-4" /> 
+                        </>
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <div className="text-center">
+                            {callStatus === "connected" ? (
+                              <div className="flex flex-col items-center gap-4">
+                                <div className="relative h-12 w-12">
+                                  <div className="absolute inset-0 animate-ping rounded-full bg-cyan-500/20" />
+                                  <div className="absolute inset-0 animate-pulse rounded-full border border-cyan-500/50" />
+                                  <div className="absolute inset-3 animate-spin rounded-full border-t-2 border-cyan-400" />
+                                </div>
+                                <p className="font-mono text-sm text-cyan-500/70">AWAITING AUDIO STREAM...</p>
+                              </div>
+                            ) : (
+                              <p className="font-mono text-sm text-gray-700">NO TRANSCRIPT DATA</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -504,6 +580,56 @@ export default function Home() {
 
         {/* === INCIDENTS HISTORY SECTION === */}
         <div className="mb-8">
+          {/* Dashboard Stats */}
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="glass-card flex flex-col justify-between rounded-lg p-5">
+              <div className="flex items-start justify-between">
+                <span className="font-mono text-xs uppercase tracking-wider text-cyan-500/70">Active Incidents</span>
+                <div className="h-2 w-2 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+              </div>
+              <div className="mt-2">
+                <span className="font-mono text-4xl font-light text-gray-100">{stats.active}</span>
+              </div>
+            </div>
+
+            <div className="glass-card flex flex-col justify-between rounded-lg border-red-500/20 p-5 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+              <div className="flex items-start justify-between">
+                <span className="font-mono text-xs uppercase tracking-wider text-red-400/70">Critical Alerts</span>
+                {stats.critical > 0 && (
+                  <div className="h-2 w-2 animate-[ping_1.5s_linear_infinite] rounded-full bg-red-500 opacity-75" />
+                )}
+              </div>
+              <div className="mt-2">
+                <span className="font-mono text-4xl font-light text-red-400">{stats.critical}</span>
+              </div>
+            </div>
+
+            <div className="glass-card flex flex-col justify-between rounded-lg border-amber-500/20 p-5 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+              <div className="flex items-start justify-between">
+                <span className="font-mono text-xs uppercase tracking-wider text-amber-400/70">Units Deployed</span>
+                <div className="h-2 w-2 rounded-full bg-amber-500/50" />
+              </div>
+              <div className="mt-2">
+                <span className="font-mono text-4xl font-light text-amber-400">{stats.units}</span>
+              </div>
+            </div>
+
+            <div className="glass-card flex flex-col justify-between rounded-lg border-gray-700/50 p-5">
+              <div className="flex items-start justify-between">
+                <span className="font-mono text-xs uppercase tracking-wider text-gray-500">Total (24h)</span>
+                <div className="h-2 w-2 rounded-full bg-gray-700" />
+              </div>
+              <div className="mt-2">
+                <span className="font-mono text-4xl font-light text-gray-400">{stats.total}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Crazy Charts Section */}
+          <div className="mb-8">
+            <DashboardCharts />
+          </div>
+
           <h2 className="mb-6 border-b border-cyan-900/50 pb-3 font-mono text-xl uppercase tracking-wide text-cyan-400">
             Recent Incidents
           </h2>

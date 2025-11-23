@@ -36,6 +36,17 @@ export default function Home() {
   const [logs, setLogs] = useState<string[]>([]);
   const [selectedDispatcherId, setSelectedDispatcherId] = useState<string>("");
   const [incidentApproved, setIncidentApproved] = useState(false);
+  const [persistedIncident, setPersistedIncident] = useState<typeof incident>(null);
+
+  // Persist incident data when it updates
+  useEffect(() => {
+    if (incident) {
+      setPersistedIncident(incident);
+    }
+  }, [incident]);
+
+  // Use active incident if available, otherwise show persisted data
+  const displayIncident = incident || persistedIncident;
 
   const addLog = useCallback((msg: string) => {
     const time =
@@ -203,14 +214,14 @@ export default function Home() {
   };
 
   const handleApproveIncident = async () => {
-    if (!incident?._id) {
+    if (!displayIncident?._id) {
       addLog("No incident to approve");
       return;
     }
 
     try {
       addLog("Approving incident as true emergency...");
-      await createPendingAssignment({ incidentId: incident._id });
+      await createPendingAssignment({ incidentId: displayIncident._id });
       setIncidentApproved(true);
       addLog("Incident approved! Assignment created with pending status.");
     } catch (e) {
@@ -299,7 +310,7 @@ export default function Home() {
               >
                 End Call
               </button>
-              {incident && !incidentApproved && (
+              {displayIncident && !incidentApproved && (
                 <button
                   onClick={handleApproveIncident}
                   className="rounded border border-amber-500/50 bg-amber-500/10 px-8 py-3 font-mono text-sm uppercase tracking-wide text-amber-400 transition hover:bg-amber-500/20 hover:shadow-[0_0_20px_rgba(251,191,36,0.4)]"
@@ -307,7 +318,7 @@ export default function Home() {
                   Approve Emergency
                 </button>
               )}
-              {incident && incidentApproved && (
+              {displayIncident && incidentApproved && (
                 <div className="flex items-center gap-2 rounded border border-cyan-500/50 bg-cyan-500/10 px-6 py-3">
                   <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
                   <span className="font-mono text-sm uppercase tracking-wide text-cyan-400">Emergency Approved</span>
@@ -316,8 +327,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Two-Column Layout for Incident Data */}
-          {callStatus === "connected" && incident && (
+          {/* Two-Column Layout for Incident Data - Always visible */}
+          {(
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
               {/* Left Column: Patient & Location Data (40%) */}
               <div className="space-y-6 lg:col-span-2">
@@ -326,53 +337,59 @@ export default function Home() {
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
                     Patient Vitals
                   </h4>
-                  <div className="space-y-3 font-mono text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Name:</span>
-                      <span className="text-gray-100">
-                        {incident.firstName || incident.lastName
-                          ? `${incident.firstName || ''} ${incident.lastName || ''}`.trim()
-                          : <span className="text-gray-600 italic">Unknown</span>
-                        }
-                      </span>
+                  {displayIncident ? (
+                    <div className="space-y-3 font-mono text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Name:</span>
+                        <span className="text-gray-100">
+                          {displayIncident.firstName || displayIncident.lastName
+                            ? `${displayIncident.firstName || ''} ${displayIncident.lastName || ''}`.trim()
+                            : <span className="text-gray-600 italic">Unknown</span>
+                          }
+                        </span>
+                      </div>
+                      {displayIncident.patientAge && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Age:</span>
+                          <span className="text-gray-100">{displayIncident.patientAge}</span>
+                        </div>
+                      )}
+                      {displayIncident.patientSex && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Sex:</span>
+                          <span className="text-gray-100">{displayIncident.patientSex}</span>
+                        </div>
+                      )}
+                      {displayIncident.consciousness && (
+                        <div className="flex justify-between border-t border-cyan-500/10 pt-3">
+                          <span className="text-gray-500">Consciousness:</span>
+                          <span className="text-cyan-300">{displayIncident.consciousness}</span>
+                        </div>
+                      )}
+                      {displayIncident.breathing && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Breathing:</span>
+                          <span className="text-cyan-300">{displayIncident.breathing}</span>
+                        </div>
+                      )}
+                      {displayIncident.avdi && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">AVDI:</span>
+                          <span className="text-cyan-300">{displayIncident.avdi}</span>
+                        </div>
+                      )}
+                      {displayIncident.respiratoryStatus && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Respiratory:</span>
+                          <span className="text-cyan-300">{displayIncident.respiratoryStatus}</span>
+                        </div>
+                      )}
                     </div>
-                    {incident.patientAge && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Age:</span>
-                        <span className="text-gray-100">{incident.patientAge}</span>
-                      </div>
-                    )}
-                    {incident.patientSex && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Sex:</span>
-                        <span className="text-gray-100">{incident.patientSex}</span>
-                      </div>
-                    )}
-                    {incident.consciousness && (
-                      <div className="flex justify-between border-t border-cyan-500/10 pt-3">
-                        <span className="text-gray-500">Consciousness:</span>
-                        <span className="text-cyan-300">{incident.consciousness}</span>
-                      </div>
-                    )}
-                    {incident.breathing && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Breathing:</span>
-                        <span className="text-cyan-300">{incident.breathing}</span>
-                      </div>
-                    )}
-                    {incident.avdi && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">AVDI:</span>
-                        <span className="text-cyan-300">{incident.avdi}</span>
-                      </div>
-                    )}
-                    {incident.respiratoryStatus && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Respiratory:</span>
-                        <span className="text-cyan-300">{incident.respiratoryStatus}</span>
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="py-8 text-center">
+                      <p className="font-mono text-sm text-gray-600 italic">No patient data available</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Location */}
@@ -380,32 +397,38 @@ export default function Home() {
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
                     Location
                   </h4>
-                  <div className="space-y-3 font-mono text-sm">
-                    <div>
-                      <span className="text-gray-500">Address:</span>
-                      <div className="mt-1 text-gray-100">
-                        {incident.address || <span className="text-gray-600 italic">Not provided</span>}
+                  {displayIncident ? (
+                    <div className="space-y-3 font-mono text-sm">
+                      <div>
+                        <span className="text-gray-500">Address:</span>
+                        <div className="mt-1 text-gray-100">
+                          {displayIncident.address || <span className="text-gray-600 italic">Not provided</span>}
+                        </div>
                       </div>
+                      {displayIncident.district && (
+                        <div>
+                          <span className="text-gray-500">District:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.district}</div>
+                        </div>
+                      )}
+                      {displayIncident.apartment && (
+                        <div>
+                          <span className="text-gray-500">Apt/Unit:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.apartment}</div>
+                        </div>
+                      )}
+                      {displayIncident.reference && (
+                        <div>
+                          <span className="text-gray-500">Reference:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.reference}</div>
+                        </div>
+                      )}
                     </div>
-                    {incident.district && (
-                      <div>
-                        <span className="text-gray-500">District:</span>
-                        <div className="mt-1 text-gray-100">{incident.district}</div>
-                      </div>
-                    )}
-                    {incident.apartment && (
-                      <div>
-                        <span className="text-gray-500">Apt/Unit:</span>
-                        <div className="mt-1 text-gray-100">{incident.apartment}</div>
-                      </div>
-                    )}
-                    {incident.reference && (
-                      <div>
-                        <span className="text-gray-500">Reference:</span>
-                        <div className="mt-1 text-gray-100">{incident.reference}</div>
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="py-8 text-center">
+                      <p className="font-mono text-sm text-gray-600 italic">No location data available</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Medical Details */}
@@ -413,41 +436,47 @@ export default function Home() {
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
                     Medical Info
                   </h4>
-                  <div className="space-y-3 font-mono text-xs">
-                    {incident.symptomOnset && (
-                      <div>
-                        <span className="text-gray-500">Symptom Onset:</span>
-                        <div className="mt-1 text-gray-100">{incident.symptomOnset}</div>
-                      </div>
-                    )}
-                    {incident.medicalHistory && (
-                      <div>
-                        <span className="text-gray-500">History:</span>
-                        <div className="mt-1 text-gray-100">{incident.medicalHistory}</div>
-                      </div>
-                    )}
-                    {incident.currentMedications && (
-                      <div>
-                        <span className="text-gray-500">Medications:</span>
-                        <div className="mt-1 text-gray-100">{incident.currentMedications}</div>
-                      </div>
-                    )}
-                    {incident.allergies && (
-                      <div>
-                        <span className="text-gray-500">Allergies:</span>
-                        <div className="mt-1 text-amber-300">{incident.allergies}</div>
-                      </div>
-                    )}
-                    {incident.vitalSigns && (
-                      <div>
-                        <span className="text-gray-500">Vital Signs:</span>
-                        <div className="mt-1 text-gray-100">{incident.vitalSigns}</div>
-                      </div>
-                    )}
-                    {!incident.symptomOnset && !incident.medicalHistory && !incident.currentMedications && !incident.allergies && !incident.vitalSigns && (
-                      <div className="text-gray-600 italic">Extracting medical data...</div>
-                    )}
-                  </div>
+                  {displayIncident ? (
+                    <div className="space-y-3 font-mono text-xs">
+                      {displayIncident.symptomOnset && (
+                        <div>
+                          <span className="text-gray-500">Symptom Onset:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.symptomOnset}</div>
+                        </div>
+                      )}
+                      {displayIncident.medicalHistory && (
+                        <div>
+                          <span className="text-gray-500">History:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.medicalHistory}</div>
+                        </div>
+                      )}
+                      {displayIncident.currentMedications && (
+                        <div>
+                          <span className="text-gray-500">Medications:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.currentMedications}</div>
+                        </div>
+                      )}
+                      {displayIncident.allergies && (
+                        <div>
+                          <span className="text-gray-500">Allergies:</span>
+                          <div className="mt-1 text-amber-300">{displayIncident.allergies}</div>
+                        </div>
+                      )}
+                      {displayIncident.vitalSigns && (
+                        <div>
+                          <span className="text-gray-500">Vital Signs:</span>
+                          <div className="mt-1 text-gray-100">{displayIncident.vitalSigns}</div>
+                        </div>
+                      )}
+                      {!displayIncident.symptomOnset && !displayIncident.medicalHistory && !displayIncident.currentMedications && !displayIncident.allergies && !displayIncident.vitalSigns && (
+                        <div className="py-4 text-center text-gray-600 italic">Extracting medical data...</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center">
+                      <p className="font-mono text-sm text-gray-600 italic">No medical data available</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -455,18 +484,24 @@ export default function Home() {
               <div className="lg:col-span-3">
                 <div className="rounded border border-cyan-500/30 bg-slate-900/50 p-4 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
                   <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
-                    Live Transcript
+                    {callStatus === "connected" ? "Live Transcript" : "Call Transcript"}
                   </h4>
                   <div className="h-[600px] overflow-y-auto rounded border border-cyan-500/10 bg-black/50 p-4">
-                    {incident.fullTranscript ? (
+                    {displayIncident?.fullTranscript ? (
                       <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-cyan-100/90">
-                        {incident.fullTranscript}
+                        {displayIncident.fullTranscript}
                       </pre>
                     ) : (
                       <div className="flex h-full items-center justify-center">
                         <div className="text-center">
-                          <div className="mb-2 h-3 w-3 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
-                          <p className="font-mono text-sm text-gray-600 italic">Waiting for transcript...</p>
+                          {callStatus === "connected" ? (
+                            <>
+                              <div className="mb-2 h-3 w-3 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
+                              <p className="font-mono text-sm text-gray-600 italic">Waiting for transcript...</p>
+                            </>
+                          ) : (
+                            <p className="font-mono text-sm text-gray-600 italic">No transcript available</p>
+                          )}
                         </div>
                       </div>
                     )}

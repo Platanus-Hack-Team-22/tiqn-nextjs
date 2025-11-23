@@ -1,19 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Device, type Call } from "@twilio/voice-sdk";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-
-type CallStatus = "initializing" | "ready" | "incoming" | "connected" | "offline" | "error";
-
-interface TokenResponse {
-  identity: string;
-  token: string;
-}
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.replace("/dispatcher");
+  }, [router]);
+
+  return null;
   const dispatchers = useQuery(api.dispatchers.list);
   const createDispatcher = useMutation(api.dispatchers.create);
   const setActiveDispatcher = useMutation(api.app_state.setActiveDispatcher);

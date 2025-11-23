@@ -7,6 +7,7 @@ import { DispatcherHeader } from "~/components/ui/DispatcherHeader";
 import { TranscriptionFeed } from "~/components/dispatcher/TranscriptionFeed";
 import { IncidentForm } from "~/components/dispatcher/IncidentForm";
 import { DispatchAlert } from "~/components/dispatcher/DispatchAlert";
+import { EmergencyConfirmationPopup } from "~/components/dispatcher/EmergencyConfirmationPopup";
 import { useState, useEffect } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
@@ -23,9 +24,13 @@ export default function LiveIncidentPage() {
   const [callDuration, setCallDuration] = useState(0);
   const [showDispatchAlert, setShowDispatchAlert] = useState(false);
   const [hasAccepted, setHasAccepted] = useState(false);
+  const [showEmergencyConfirmation, setShowEmergencyConfirmation] = useState(false);
+  const [hasShownConfirmation, setHasShownConfirmation] = useState(false);
 
   const incident = useQuery(api.incidents.getIncident, { incidentId });
   const acceptCall = useMutation(api.incidents.acceptCall);
+  const confirmEmergency = useMutation(api.incidents.confirmEmergency);
+  const endCall = useMutation(api.incidents.endCall);
 
   // Auto-accept call if it's incoming_call
   useEffect(() => {
@@ -56,6 +61,19 @@ export default function LiveIncidentPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, [incident]);
+
+  // Show emergency confirmation popup when incident is confirmed and no assignment exists
+  useEffect(() => {
+    if (
+      incident?.status === "confirmed" &&
+      !incident.assignment &&
+      !hasShownConfirmation &&
+      hasAccepted
+    ) {
+      setShowEmergencyConfirmation(true);
+      setHasShownConfirmation(true);
+    }
+  }, [incident, hasShownConfirmation, hasAccepted]);
 
   // Show dispatch alert when incident is confirmed
   useEffect(() => {
@@ -115,7 +133,17 @@ export default function LiveIncidentPage() {
           <button className="bg-white hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 transition uppercase tracking-wider">
             Request MD
           </button>
-          <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold border border-red-700 transition uppercase tracking-wider">
+          <button
+            onClick={async () => {
+              try {
+                await endCall({ incidentId: incident._id });
+                router.push("/dispatcher");
+              } catch (error) {
+                console.error("Error ending call:", error);
+              }
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold border border-red-700 transition uppercase tracking-wider"
+          >
             End Call
           </button>
         </div>
@@ -172,9 +200,25 @@ export default function LiveIncidentPage() {
               reference: incident.reference,
             }}
             patient={incident.patient ?? undefined}
+            callerPhone={incident.call?.callerPhone ?? incident.patient?.phone ?? undefined}
           />
         </div>
       </div>
+
+      {/* Emergency Confirmation Popup */}
+      {showEmergencyConfirmation && (
+        <EmergencyConfirmationPopup
+          onClose={() => setShowEmergencyConfirmation(false)}
+          onConfirm={async () => {
+            try {
+              await confirmEmergency({ incidentId: incident._id });
+              setShowEmergencyConfirmation(false);
+            } catch (error) {
+              console.error("Error confirming emergency:", error);
+            }
+          }}
+        />
+      )}
 
       {/* Dispatch Alert Popup */}
       {showDispatchAlert && (

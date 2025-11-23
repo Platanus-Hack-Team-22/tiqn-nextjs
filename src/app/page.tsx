@@ -313,7 +313,7 @@ export default function Home() {
     addLog(`Selected incident: ${incidentData._id}`);
     console.log("[IncidentSelect] State update queued", {
       selectedIncidentId: incidentData._id,
-      hasTranscript: Boolean(incidentData.fullTranscript),
+      hasTranscript: Boolean(incidentData.liveTranscript),
     });
     // Scroll to top to show the incident details
     if (typeof window !== "undefined") {
@@ -620,11 +620,11 @@ export default function Home() {
                     <div className={`pointer-events-none absolute left-0 z-10 w-full bg-gradient-to-b from-[#FFFAF1] to-transparent ${callStatus === "connected" ? "top-24 h-12" : "top-0 h-12"}`} />
                     
                     <div className={`h-[600px] space-y-4 overflow-y-auto pr-2 ${callStatus === "connected" ? "pt-28 pb-4" : "pt-0 pb-4"}`}>
-                      {displayIncident?.fullTranscript ? (
+                      {displayIncident?.liveTranscript ? (
                         <>
                           {(() => {
                             // Separar por frases (punto seguido de espacio o punto final)
-                            const sentences = displayIncident.fullTranscript
+                            const sentences = displayIncident.liveTranscript
                               .split(/(?<=[.!?])\s+/)
                               .filter(s => s.trim());
 

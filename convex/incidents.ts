@@ -6,10 +6,22 @@ import { v } from "convex/values";
  */
 export const createOrUpdate = mutation({
   args: {
-    // Required
-    callSessionId: v.string(),
-    dispatcherId: v.id("dispatchers"),
-    
+    // Support both naming conventions (Python backend uses externalCallId)
+    callSessionId: v.optional(v.string()),
+    externalCallId: v.optional(v.string()),
+    dispatcherId: v.union(v.id("dispatchers"), v.string()), // Accept both ID and string
+
+    // Status (Python backend may send "active")
+    status: v.optional(v.union(
+      v.literal("incoming_call"),
+      v.literal("confirmed"),
+      v.literal("rescuer_assigned"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("active")
+    )),
+
     // Optional - only provided fields will be updated
     priority: v.optional(v.union(
       v.literal("low"),
@@ -17,7 +29,10 @@ export const createOrUpdate = mutation({
       v.literal("high"),
       v.literal("critical")
     )),
-    
+
+    // Real-time transcript (Python backend uses this for interim updates)
+    liveTranscript: v.optional(v.string()),
+
     // Patient data
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
@@ -27,32 +42,32 @@ export const createOrUpdate = mutation({
     breathing: v.optional(v.string()),
     avdi: v.optional(v.string()),
     respiratoryStatus: v.optional(v.string()),
-    
+
     // Medical details
     symptomOnset: v.optional(v.string()),
     medicalHistory: v.optional(v.string()),
     currentMedications: v.optional(v.string()),
     allergies: v.optional(v.string()),
     vitalSigns: v.optional(v.string()),
-    
+
     // Location (separate fields)
     address: v.optional(v.string()),
     district: v.optional(v.string()),
     reference: v.optional(v.string()),
     apartment: v.optional(v.string()),
-    
+
     // Resources
     requiredRescuers: v.optional(v.string()),
     requiredResources: v.optional(v.string()),
-    
+
     // Administrative
     healthInsurance: v.optional(v.string()),
     conciergeNotified: v.optional(v.string()),
-    
+
     // Incident info
     incidentType: v.optional(v.string()),
     description: v.optional(v.string()),
-    
+
     // Complete data
     fullTranscript: v.optional(v.string()),
     rawCanonicalData: v.optional(v.any()),
@@ -60,14 +75,28 @@ export const createOrUpdate = mutation({
   
   handler: async (ctx, args) => {
     console.log("Calling incidents:createOrUpdate", args);
-    const { callSessionId, dispatcherId, ...updateData } = args;
-    
-    // Try to find existing incident by session ID
-    const existing = await ctx.db
+
+    // Handle both naming conventions: externalCallId (Python) and callSessionId (internal)
+    const sessionId = args.externalCallId || args.callSessionId;
+    const { callSessionId, externalCallId, dispatcherId, ...updateData } = args;
+
+    if (!sessionId) {
+      throw new Error("Either callSessionId or externalCallId must be provided");
+    }
+
+    // Try to find existing incident by either field
+    let existing = await ctx.db
       .query("incidents")
-      .withIndex("by_session", (q) => q.eq("callSessionId", callSessionId))
+      .withIndex("by_session", (q) => q.eq("callSessionId", sessionId))
       .first();
-    
+
+    if (!existing && externalCallId) {
+      existing = await ctx.db
+        .query("incidents")
+        .withIndex("by_externalCallId", (q) => q.eq("externalCallId", externalCallId))
+        .first();
+    }
+
     if (existing) {
       // UPDATE existing incident
       await ctx.db.patch(existing._id, {
@@ -78,11 +107,11 @@ export const createOrUpdate = mutation({
     } else {
       // CREATE new incident (first chunk of call)
       const incidentId = await ctx.db.insert("incidents", {
-        callSessionId,
+        callSessionId: sessionId,
+        externalCallId: sessionId, // Store in both fields for compatibility
         dispatcherId,
-        status: "incoming_call",
-        priority: args.priority || "medium",
-        address: args.address || "Unknown",
+        status: args.status, // Don't provide default - let it be undefined if not sent
+        priority: args.priority, // Don't provide default - let it be undefined if not sent
         lastUpdated: Date.now(),
         ...updateData,
       });

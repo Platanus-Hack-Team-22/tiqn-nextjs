@@ -8,13 +8,16 @@
  * @module
  */
 
+import type * as addTranscription from "../addTranscription.js";
 import type * as app_state from "../app_state.js";
 import type * as calls from "../calls.js";
 import type * as cleanup from "../cleanup.js";
 import type * as copyFromProd from "../copyFromProd.js";
 import type * as dispatchers from "../dispatchers.js";
+import type * as findIncident from "../findIncident.js";
 import type * as incidents from "../incidents.js";
 import type * as init from "../init.js";
+import type * as known_patient_records from "../known_patient_records.js";
 import type * as patients from "../patients.js";
 import type * as readAll from "../readAll.js";
 import type * as rescuers from "../rescuers.js";
@@ -32,13 +35,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  addTranscription: typeof addTranscription;
   app_state: typeof app_state;
   calls: typeof calls;
   cleanup: typeof cleanup;
   copyFromProd: typeof copyFromProd;
   dispatchers: typeof dispatchers;
+  findIncident: typeof findIncident;
   incidents: typeof incidents;
   init: typeof init;
+  known_patient_records: typeof known_patient_records;
   patients: typeof patients;
   readAll: typeof readAll;
   rescuers: typeof rescuers;

@@ -139,6 +139,16 @@ export default defineSchema({
     updatedAt: v.float64(),
   }).index("by_rut", ["rut"]),
 
+  known_patient_records: defineTable({
+    profilePicture: v.optional(v.string()),
+    firstName: v.string(),
+    lastName: v.string(),
+    bloodType: v.optional(v.string()),
+    visitNotes: v.optional(v.string()),
+  })
+    .index("by_first_name", ["firstName"])
+    .index("by_last_name", ["lastName"]),
+
   rescuers: defineTable({
     currentLocation: v.optional(
       v.object({

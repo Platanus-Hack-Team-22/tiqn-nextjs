@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Device, type Call } from "@twilio/voice-sdk";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
-type CallStatus = "initializing" | "ready" | "incoming" | "connected" | "offline" | "error";
+type CallStatus =
+  | "initializing"
+  | "ready"
+  | "incoming"
+  | "connected"
+  | "offline"
+  | "error";
 
 interface TokenResponse {
   identity: string;
@@ -24,11 +30,22 @@ export default function Home() {
   const [logs, setLogs] = useState<string[]>([]);
   const [selectedDispatcherId, setSelectedDispatcherId] = useState<string>("");
 
-  const addLog = (msg: string) => {
-    const time = new Date().toISOString().split('T')[1]?.split('.')[0] ?? "00:00:00";
+  const addLog = useCallback((msg: string) => {
+    const time =
+      new Date().toISOString().split("T")[1]?.split(".")[0] ?? "00:00:00";
     setLogs((prev) => [...prev, `${time} - ${msg}`]);
     console.log(msg);
-  };
+  }, []);
+
+  const handleDispatcherChange = useCallback(async (id: string) => {
+    setSelectedDispatcherId(id);
+    try {
+      await setActiveDispatcher({ dispatcherId: id as Id<"dispatchers"> });
+      addLog(`Active dispatcher set to: ${id}`);
+    } catch (e) {
+      addLog(`Error setting active dispatcher: ${e as string}`);
+    }
+  }, [setActiveDispatcher, addLog]);
 
   // Create mock dispatcher if none exist
   useEffect(() => {
@@ -50,18 +67,15 @@ export default function Home() {
         void handleDispatcherChange(first._id);
       }
     }
-  }, [dispatchers, createDispatcher, selectedDispatcherId]);
+  }, [
+    dispatchers,
+    createDispatcher,
+    selectedDispatcherId,
+    handleDispatcherChange,
+    addLog,
+  ]);
 
   // Handle selection change
-  const handleDispatcherChange = async (id: string) => {
-    setSelectedDispatcherId(id);
-    try {
-      await setActiveDispatcher({ dispatcherId: id as Id<"dispatchers"> });
-      addLog(`Active dispatcher set to: ${id}`);
-    } catch (e) {
-      addLog(`Error setting active dispatcher: ${e as string}`);
-    }
-  };
 
   // Initialize Device when selectedDispatcherId changes
   useEffect(() => {
@@ -74,12 +88,14 @@ export default function Home() {
       try {
         addLog(`Fetching access token for ${selectedDispatcherId}...`);
         // Pass the selected dispatcher ID as identity
-        const response = await fetch(`/api/twilio/token?identity=${selectedDispatcherId}`);
+        const response = await fetch(
+          `/api/twilio/token?identity=${selectedDispatcherId}`,
+        );
         if (!response.ok) {
           throw new Error(`Failed to fetch token: ${response.statusText}`);
         }
         const data = (await response.json()) as TokenResponse;
-        
+
         if (!mounted) return;
 
         setIdentity(data.identity);
@@ -115,21 +131,20 @@ export default function Home() {
           });
 
           call.on("cancel", () => {
-             if (!mounted) return;
-             addLog("Call canceled");
-             setCallStatus("ready");
-             setCurrentCall(null);
+            if (!mounted) return;
+            addLog("Call canceled");
+            setCallStatus("ready");
+            setCurrentCall(null);
           });
         });
 
         await newDevice.register();
-        
+
         if (mounted) {
           activeDevice = newDevice;
         } else {
           newDevice.destroy();
         }
-
       } catch (err) {
         if (!mounted) return;
         const message = err instanceof Error ? err.message : String(err);
@@ -148,7 +163,7 @@ export default function Home() {
         activeDevice.destroy();
       }
     };
-  }, [selectedDispatcherId]);
+  }, [selectedDispatcherId, addLog]);
 
   const handleAccept = () => {
     if (currentCall) {
@@ -177,23 +192,29 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-50 text-gray-900">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="bg-blue-600 p-6 text-white text-center">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-8 text-gray-900">
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-lg">
+        <div className="bg-blue-600 p-6 text-center text-white">
           <h1 className="text-2xl font-bold">Twilio Voice Agent</h1>
-          <p className="opacity-90 mt-1">{identity ? `Logged in as: ${identity}` : "Initializing..."}</p>
+          <p className="mt-1 opacity-90">
+            {identity ? `Logged in as: ${identity}` : "Initializing..."}
+          </p>
         </div>
 
-        <div className="p-8 flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-6 p-8">
           {/* Dispatcher Selection */}
           <div className="w-full">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Dispatcher</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Select Dispatcher
+            </label>
             <select
-              className="w-full p-2 border rounded-md bg-white shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
+              className="w-full rounded-md border bg-white p-2 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
               value={selectedDispatcherId}
               onChange={(e) => handleDispatcherChange(e.target.value)}
             >
-              <option value="" disabled>Select a dispatcher...</option>
+              <option value="" disabled>
+                Select a dispatcher...
+              </option>
               {dispatchers?.map((d) => (
                 <option key={d._id} value={d._id}>
                   {d.name} {d.phone ? `(${d.phone})` : ""}
@@ -202,26 +223,31 @@ export default function Home() {
             </select>
           </div>
 
-          <div className={`text-xl font-semibold px-4 py-2 rounded-full ${
-            callStatus === 'incoming' ? 'bg-yellow-100 text-yellow-700 animate-pulse' :
-            callStatus === 'connected' ? 'bg-green-100 text-green-700' :
-            callStatus === 'ready' ? 'bg-gray-100 text-gray-600' :
-            'bg-red-100 text-red-700'
-          }`}>
+          <div
+            className={`rounded-full px-4 py-2 text-xl font-semibold ${
+              callStatus === "incoming"
+                ? "animate-pulse bg-yellow-100 text-yellow-700"
+                : callStatus === "connected"
+                  ? "bg-green-100 text-green-700"
+                  : callStatus === "ready"
+                    ? "bg-gray-100 text-gray-600"
+                    : "bg-red-100 text-red-700"
+            }`}
+          >
             Status: {callStatus.toUpperCase()}
           </div>
 
           {callStatus === "incoming" && (
-            <div className="flex gap-4 w-full justify-center">
+            <div className="flex w-full justify-center gap-4">
               <button
                 onClick={handleAccept}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition shadow-md"
+                className="flex-1 rounded-lg bg-green-500 px-6 py-3 font-bold text-white shadow-md transition hover:bg-green-600"
               >
                 Accept
               </button>
               <button
                 onClick={handleDecline}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition shadow-md"
+                className="flex-1 rounded-lg bg-red-500 px-6 py-3 font-bold text-white shadow-md transition hover:bg-red-600"
               >
                 Decline
               </button>
@@ -230,20 +256,22 @@ export default function Home() {
 
           {callStatus === "connected" && (
             <div className="w-full">
-               <button
+              <button
                 onClick={handleDisconnect}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md"
+                className="w-full rounded-lg bg-red-600 px-6 py-3 font-bold text-white shadow-md transition hover:bg-red-700"
               >
                 Hang Up
               </button>
             </div>
           )}
 
-          <div className="w-full border-t pt-4 mt-2">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Logs</h3>
-            <div className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs font-mono h-48 overflow-y-auto">
+          <div className="mt-2 w-full border-t pt-4">
+            <h3 className="mb-2 text-sm font-medium text-gray-500">Logs</h3>
+            <div className="h-48 overflow-y-auto rounded-lg bg-gray-900 p-4 font-mono text-xs text-green-400">
               {logs.length === 0 ? (
-                <span className="opacity-50">System logs will appear here...</span>
+                <span className="opacity-50">
+                  System logs will appear here...
+                </span>
               ) : (
                 logs.map((log, i) => <div key={i}>{log}</div>)
               )}

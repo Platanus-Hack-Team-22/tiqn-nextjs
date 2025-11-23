@@ -17,6 +17,8 @@ export function EmergencyConfirmationPopup({
     setIsConfirming(true);
     try {
       await onConfirm();
+    } catch (error) {
+      console.error("Error confirming emergency:", error);
     } finally {
       setIsConfirming(false);
     }
@@ -73,7 +75,9 @@ export function EmergencyConfirmationPopup({
             Cancelar
           </button>
           <button
-            onClick={handleConfirm}
+            onClick={() => {
+              void handleConfirm();
+            }}
             disabled={isConfirming}
             className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded text-xs font-semibold transition flex items-center justify-center gap-1.5 uppercase tracking-wider border border-red-700 disabled:opacity-75"
           >

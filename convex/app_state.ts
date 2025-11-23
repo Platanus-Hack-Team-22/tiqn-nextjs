@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 export const getActiveDispatcher = query({
   args: {},
@@ -42,11 +43,24 @@ export const setActiveIncident = mutation({
     incidentId: v.union(v.id("incidents"), v.string(), v.null()),
   },
   handler: async (ctx, args) => {
-    // Only store Convex IDs in app_state; treat plain strings as "no stored incident"
-    const incidentIdToStore =
-      args.incidentId !== null && typeof args.incidentId !== "string"
-        ? args.incidentId
-        : undefined;
+    let incidentIdToStore: Id<"incidents"> | undefined;
+
+    if (args.incidentId === null) {
+      incidentIdToStore = undefined;
+    } else if (typeof args.incidentId === "string") {
+      const normalized = ctx.db.normalizeId("incidents", args.incidentId);
+      if (normalized) {
+        incidentIdToStore = normalized;
+      } else {
+        console.warn(
+          "app_state:setActiveIncident received invalid incidentId string, clearing active incident",
+          args.incidentId,
+        );
+        incidentIdToStore = undefined;
+      }
+    } else {
+      incidentIdToStore = args.incidentId;
+    }
 
     const state = await ctx.db
       .query("app_state")
@@ -65,10 +79,10 @@ export const setActiveIncident = mutation({
     }
 
     // Log for Python/backend usage
-    if (args.incidentId) {
-      console.log("Active incident set to:", args.incidentId);
+    if (incidentIdToStore) {
+      console.log("Active incident set to:", incidentIdToStore);
     } else {
-      console.log("Active incident cleared (null received)");
+      console.log("Active incident cleared (null or invalid id received)");
     }
 
     return { success: true };

@@ -32,18 +32,18 @@ export default function DispatcherDashboard() {
   // Get dispatcher ID (active or first available)
   const dispatcherId = activeDispatcherId ?? (dispatchers && dispatchers.length > 0 ? dispatchers[0]?._id : null);
 
-  // Initialize Twilio Device
+  // Initialize Twilio Device in dashboard - this will stay active even when navigating
+  // The Device will NOT be destroyed when navigating to incident page if there's an active call
   const { callStatus, currentCall, acceptCall: twilioAcceptCall } = useTwilioDevice({
     dispatcherId: dispatcherId ?? null,
     onIncomingCall: (_call, from) => {
-      console.log(`Incoming call from ${from} - navigating to incident...`);
-      // When a call comes in, we'll handle it in the incident page
+      console.log(`Incoming call from ${from} in dashboard`);
     },
     onCallAccepted: () => {
-      console.log("Call accepted via Twilio");
+      console.log("Call accepted via Twilio in dashboard");
     },
     onCallDisconnected: () => {
-      console.log("Call disconnected");
+      console.log("Call disconnected in dashboard");
     },
   });
 
@@ -119,11 +119,11 @@ export default function DispatcherDashboard() {
                     priority={incident.priority}
                     status={incident.status}
                     onClick={() => {
-                      // When clicking on an incoming call, accept it if there's a Twilio call
+                      // Accept Twilio call if there's one incoming before navigating
                       if (currentCall && callStatus === "incoming") {
                         twilioAcceptCall();
                       }
-                      // Navigate to incident page (will auto-accept there)
+                      // Navigate to incident page
                       router.push(`/dispatcher/${incident._id}`);
                     }}
                   />

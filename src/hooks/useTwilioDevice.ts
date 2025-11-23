@@ -174,9 +174,16 @@ export function useTwilioDevice({
     return () => {
       mounted = false;
       if (activeDevice) {
-        console.log("Cleaning up device...");
-        activeDevice.destroy();
-        deviceRef.current = null;
+        // Don't destroy device if there's an active call - let it continue
+        const hasActiveCall = activeDevice.calls.length > 0;
+        if (!hasActiveCall) {
+          console.log("Cleaning up device (no active calls)...");
+          activeDevice.destroy();
+          deviceRef.current = null;
+        } else {
+          console.log("Keeping device alive (active call in progress)...");
+          // Keep deviceRef.current set so Device persists
+        }
       }
     };
   }, [dispatcherId, onIncomingCall, onCallAccepted, onCallDisconnected, playIncomingCallSound]);

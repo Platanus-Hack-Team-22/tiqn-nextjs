@@ -243,7 +243,17 @@ function PatientStatus() {
   );
 }
 
-function CircularGauge({ label, value, color, stroke }: { label: string, value: number, color: string, stroke: string }) {
+function CircularGauge({
+  label,
+  value,
+  color,
+  stroke,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  stroke: string;
+}) {
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (value / 100) * circumference;
@@ -271,4 +281,3 @@ function CircularGauge({ label, value, color, stroke }: { label: string, value: 
     </div>
   );
 }
-

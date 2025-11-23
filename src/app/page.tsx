@@ -92,14 +92,6 @@ export default function Home() {
     }
   }, [callStatus]);
 
-  // Track which fields just got filled (for animations)
-  // Note: This effect is kept for potential future use with animations
-  useEffect(() => {
-    if (displayIncident) {
-      // Track previous data for animation triggers if needed
-      void displayIncident;
-    }
-  }, [displayIncident]);
 
   // Persist incident data when it updates
   useEffect(() => {

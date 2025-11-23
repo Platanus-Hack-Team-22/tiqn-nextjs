@@ -145,3 +145,4 @@ export function AudioVisualizer({ isActive }: AudioVisualizerProps) {
     </div>
   );
 }
+

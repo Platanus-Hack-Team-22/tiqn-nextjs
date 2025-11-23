@@ -23,6 +23,11 @@ export default function Home() {
   const dispatchers = useQuery(api.dispatchers.list);
   const createDispatcher = useMutation(api.dispatchers.create);
   const setActiveDispatcher = useMutation(api.app_state.setActiveDispatcher);
+  const appState = useQuery(api.app_state.get);
+  const incident = useQuery(
+    api.incidents.get,
+    appState?.activeIncidentId ? { id: appState.activeIncidentId } : "skip"
+  );
 
   const [currentCall, setCurrentCall] = useState<Call | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("initializing");
@@ -262,6 +267,53 @@ export default function Home() {
               >
                 Hang Up
               </button>
+            </div>
+          )}
+
+          {callStatus === "connected" && incident && (
+            <div className="w-full space-y-3">
+              <h3 className="text-sm font-medium text-gray-700">Incident Data</h3>
+
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase text-blue-700">Patient Info</h4>
+                <div className="space-y-1 text-sm">
+                  {incident.firstName || incident.lastName ? (
+                    <div><span className="font-medium">Name:</span> {incident.firstName} {incident.lastName}</div>
+                  ) : <div className="text-gray-400 italic">Name: Not provided</div>}
+                  {incident.patientAge && <div><span className="font-medium">Age:</span> {incident.patientAge}</div>}
+                  {incident.patientSex && <div><span className="font-medium">Sex:</span> {incident.patientSex}</div>}
+                  {incident.consciousness && <div><span className="font-medium">Consciousness:</span> {incident.consciousness}</div>}
+                  {incident.breathing && <div><span className="font-medium">Breathing:</span> {incident.breathing}</div>}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase text-green-700">Location</h4>
+                <div className="space-y-1 text-sm">
+                  {incident.address ? (
+                    <div><span className="font-medium">Address:</span> {incident.address}</div>
+                  ) : <div className="text-gray-400 italic">Address: Not provided</div>}
+                  {incident.district && <div><span className="font-medium">District:</span> {incident.district}</div>}
+                  {incident.apartment && <div><span className="font-medium">Apt/Unit:</span> {incident.apartment}</div>}
+                  {incident.reference && <div><span className="font-medium">Reference:</span> {incident.reference}</div>}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase text-orange-700">Medical Status</h4>
+                <div className="space-y-1 text-sm">
+                  {incident.avdi && <div><span className="font-medium">AVDI:</span> {incident.avdi}</div>}
+                  {incident.respiratoryStatus && <div><span className="font-medium">Respiratory:</span> {incident.respiratoryStatus}</div>}
+                  {incident.symptomOnset && <div><span className="font-medium">Symptom Onset:</span> {incident.symptomOnset}</div>}
+                  {incident.medicalHistory && <div><span className="font-medium">History:</span> {incident.medicalHistory}</div>}
+                  {incident.currentMedications && <div><span className="font-medium">Medications:</span> {incident.currentMedications}</div>}
+                  {incident.allergies && <div><span className="font-medium">Allergies:</span> {incident.allergies}</div>}
+                  {incident.vitalSigns && <div><span className="font-medium">Vital Signs:</span> {incident.vitalSigns}</div>}
+                  {!incident.avdi && !incident.respiratoryStatus && !incident.symptomOnset && !incident.medicalHistory && !incident.currentMedications && !incident.allergies && !incident.vitalSigns && (
+                    <div className="text-gray-400 italic">Extracting medical data...</div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

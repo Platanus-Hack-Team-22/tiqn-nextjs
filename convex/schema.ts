@@ -207,6 +207,7 @@ export default defineSchema({
   app_state: defineTable({
     key: v.literal("global"),
     activeDispatcherId: v.optional(v.id("dispatchers")),
+    activeIncidentId: v.optional(v.id("incidents")),
   }).index("by_key", ["key"]),
 });
 

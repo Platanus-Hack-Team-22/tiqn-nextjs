@@ -33,3 +33,37 @@ export const setActiveDispatcher = mutation({
   },
 });
 
+export const setActiveIncident = mutation({
+  args: {
+    incidentId: v.union(v.id("incidents"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const state = await ctx.db
+      .query("app_state")
+      .withIndex("by_key", (q) => q.eq("key", "global"))
+      .first();
+
+    if (state) {
+      await ctx.db.patch(state._id, {
+        activeIncidentId: args.incidentId ?? undefined
+      });
+    } else {
+      await ctx.db.insert("app_state", {
+        key: "global",
+        activeIncidentId: args.incidentId ?? undefined,
+      });
+    }
+  },
+});
+
+export const get = query({
+  args: {},
+  handler: async (ctx) => {
+    const state = await ctx.db
+      .query("app_state")
+      .withIndex("by_key", (q) => q.eq("key", "global"))
+      .first();
+    return state;
+  },
+});
+

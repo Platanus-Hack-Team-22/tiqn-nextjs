@@ -46,7 +46,7 @@ export default function Home() {
   }, [incident]);
 
   // Use active incident if available, otherwise show persisted data
-  const displayIncident = incident || persistedIncident;
+  const displayIncident = incident ?? persistedIncident;
 
   const addLog = useCallback((msg: string) => {
     const time =
@@ -342,8 +342,8 @@ export default function Home() {
                       <div className="flex justify-between">
                         <span className="text-gray-500">Name:</span>
                         <span className="text-gray-100">
-                          {displayIncident.firstName || displayIncident.lastName
-                            ? `${displayIncident.firstName || ''} ${displayIncident.lastName || ''}`.trim()
+                          {displayIncident.firstName ?? displayIncident.lastName
+                            ? `${displayIncident.firstName ?? ''} ${displayIncident.lastName ?? ''}`.trim()
                             : <span className="text-gray-600 italic">Unknown</span>
                           }
                         </span>
@@ -402,7 +402,7 @@ export default function Home() {
                       <div>
                         <span className="text-gray-500">Address:</span>
                         <div className="mt-1 text-gray-100">
-                          {displayIncident.address || <span className="text-gray-600 italic">Not provided</span>}
+                          {displayIncident.address ?? <span className="text-gray-600 italic">Not provided</span>}
                         </div>
                       </div>
                       {displayIncident.district && (

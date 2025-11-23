@@ -13,10 +13,10 @@ export function EmergencyConfirmationPopup({
 }: EmergencyConfirmationPopupProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     setIsConfirming(true);
     try {
-      await onConfirm();
+      onConfirm();
     } finally {
       setIsConfirming(false);
     }

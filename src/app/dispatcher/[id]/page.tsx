@@ -10,7 +10,7 @@ import { DispatchAlert } from "~/components/dispatcher/DispatchAlert";
 import { EmergencyConfirmationPopup } from "~/components/dispatcher/EmergencyConfirmationPopup";
 import { useState, useEffect } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import { useTwilioDevice } from "~/hooks/useTwilioDevice";
+// Twilio Device is managed in dashboard, not here
 
 function formatTimer(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -34,23 +34,18 @@ export default function LiveIncidentPage() {
   const endCall = useMutation(api.incidents.endCall);
   const activeDispatcherId = useQuery(api.app_state.getActiveDispatcher) as Id<"dispatchers"> | null | undefined;
 
-  // Initialize Twilio Device for this incident
-  const { callStatus, currentCall, acceptCall: twilioAcceptCall, disconnectCall: twilioDisconnectCall } = useTwilioDevice({
-    dispatcherId: activeDispatcherId ?? incident?.dispatcherId ?? null,
-    onIncomingCall: (_call, from) => {
-      console.log(`Incoming call from ${from} in incident page`);
-      // Auto-accept the call when it arrives
-      setTimeout(() => {
-        twilioAcceptCall();
-      }, 100);
-    },
-    onCallAccepted: () => {
-      console.log("Call accepted via Twilio in incident page");
-    },
-    onCallDisconnected: () => {
-      console.log("Call disconnected in incident page");
-    },
-  });
+  // NOTE: Twilio Device is initialized in the dashboard, not here
+  // This prevents the call from being disconnected when navigating between pages
+  // The Device from the dashboard will remain active and handle the call
+  // We don't need to manage the call here since it's handled by the dashboard Device
+  const currentCall = null;
+  const callStatus: "initializing" | "ready" | "incoming" | "connected" | "disconnected" | "error" = "ready";
+  const twilioAcceptCall = () => {
+    console.log("Call should be accepted from dashboard Device");
+  };
+  const twilioDisconnectCall = () => {
+    console.log("Call should be disconnected from dashboard Device");
+  };
 
   // Auto-accept call if it's incoming_call
   useEffect(() => {
@@ -69,12 +64,8 @@ export default function LiveIncidentPage() {
           console.error("Error accepting call:", error);
         });
 
-      // Accept the Twilio call if there's one incoming
-      if (currentCall && callStatus === "incoming") {
-        setTimeout(() => {
-          twilioAcceptCall();
-        }, 500);
-      }
+      // Twilio call is handled by the dashboard Device
+      // No need to accept here since Device is managed in dashboard
     }
   }, [incident, acceptCall, hasAccepted, currentCall, callStatus, twilioAcceptCall]);
 

@@ -10,6 +10,7 @@ import { DispatchAlert } from "~/components/dispatcher/DispatchAlert";
 import { EmergencyConfirmationPopup } from "~/components/dispatcher/EmergencyConfirmationPopup";
 import { useState, useEffect } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { useTwilioDevice } from "~/hooks/useTwilioDevice";
 
 function formatTimer(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -31,13 +32,32 @@ export default function LiveIncidentPage() {
   const acceptCall = useMutation(api.incidents.acceptCall);
   const confirmEmergency = useMutation(api.incidents.confirmEmergency);
   const endCall = useMutation(api.incidents.endCall);
+  const activeDispatcherId = useQuery(api.app_state.getActiveDispatcher) as Id<"dispatchers"> | null | undefined;
+
+  // Initialize Twilio Device for this incident
+  const { callStatus, currentCall, acceptCall: twilioAcceptCall, disconnectCall: twilioDisconnectCall } = useTwilioDevice({
+    dispatcherId: activeDispatcherId ?? incident?.dispatcherId ?? null,
+    onIncomingCall: (_call, from) => {
+      console.log(`Incoming call from ${from} in incident page`);
+      // Auto-accept the call when it arrives
+      setTimeout(() => {
+        twilioAcceptCall();
+      }, 100);
+    },
+    onCallAccepted: () => {
+      console.log("Call accepted via Twilio in incident page");
+    },
+    onCallDisconnected: () => {
+      console.log("Call disconnected in incident page");
+    },
+  });
 
   // Auto-accept call if it's incoming_call
   useEffect(() => {
     if (!incident || hasAccepted) return;
     
     if (incident.status === "incoming_call" && incident.dispatcherId) {
-      // Aceptar automáticamente la llamada cuando se abre la vista
+      // Accept the call in Convex database
       acceptCall({
         incidentId: incident._id,
         dispatcherId: incident.dispatcherId,
@@ -48,8 +68,15 @@ export default function LiveIncidentPage() {
         .catch((error) => {
           console.error("Error accepting call:", error);
         });
+
+      // Accept the Twilio call if there's one incoming
+      if (currentCall && callStatus === "incoming") {
+        setTimeout(() => {
+          twilioAcceptCall();
+        }, 500);
+      }
     }
-  }, [incident, acceptCall, hasAccepted]);
+  }, [incident, acceptCall, hasAccepted, currentCall, callStatus, twilioAcceptCall]);
 
   // Calculate call duration based on lastUpdated time
   useEffect(() => {
@@ -136,6 +163,11 @@ export default function LiveIncidentPage() {
           <button
             onClick={async () => {
               try {
+                // Disconnect Twilio call first
+                if (currentCall) {
+                  twilioDisconnectCall();
+                }
+                // Then end the call in Convex
                 await endCall({ incidentId: incident._id });
                 router.push("/dispatcher");
               } catch (error) {

@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { DispatcherHeader } from "~/components/ui/DispatcherHeader";
 import { IncidentCard } from "~/components/ui/IncidentCard";
 import { useMemo, useState, useEffect } from "react";
+import { useTwilioDevice } from "~/hooks/useTwilioDevice";
+import { useRouter } from "next/navigation";
 
 type IncidentWithRelations = {
   _id: Id<"incidents">;
@@ -18,10 +20,49 @@ type IncidentWithRelations = {
 };
 
 export default function DispatcherDashboard() {
+  const router = useRouter();
   const incomingCalls = useQuery(api.incidents.getIncomingCalls) as IncidentWithRelations[] | undefined;
   const activeIncidents = useQuery(api.incidents.getActiveIncidents) as IncidentWithRelations[] | undefined;
   const recentIncidents = useQuery(api.incidents.getRecentIncidents, { limit: 10 }) as IncidentWithRelations[] | undefined;
+  const dispatchers = useQuery(api.dispatchers.list);
+  const activeDispatcherId = useQuery(api.app_state.getActiveDispatcher) as Id<"dispatchers"> | null | undefined;
+  const setActiveDispatcher = useMutation(api.app_state.setActiveDispatcher);
   const [currentTime, setCurrentTime] = useState<string>("");
+
+  // Get dispatcher ID (active or first available)
+  const dispatcherId = activeDispatcherId ?? (dispatchers && dispatchers.length > 0 ? dispatchers[0]?._id : null);
+
+  // Initialize Twilio Device
+  const { callStatus, currentCall, acceptCall: twilioAcceptCall } = useTwilioDevice({
+    dispatcherId: dispatcherId ?? null,
+    onIncomingCall: (_call, from) => {
+      console.log(`Incoming call from ${from} - navigating to incident...`);
+      // When a call comes in, we'll handle it in the incident page
+    },
+    onCallAccepted: () => {
+      console.log("Call accepted via Twilio");
+    },
+    onCallDisconnected: () => {
+      console.log("Call disconnected");
+    },
+  });
+
+  // Set active dispatcher when it changes
+  useEffect(() => {
+    if (dispatcherId && dispatcherId !== activeDispatcherId) {
+      setActiveDispatcher({ dispatcherId }).catch(console.error);
+    }
+  }, [dispatcherId, activeDispatcherId, setActiveDispatcher]);
+
+  // Auto-select first dispatcher if none selected
+  useEffect(() => {
+    if (!activeDispatcherId && dispatchers && dispatchers.length > 0) {
+      const firstDispatcher = dispatchers[0];
+      if (firstDispatcher) {
+        setActiveDispatcher({ dispatcherId: firstDispatcher._id }).catch(console.error);
+      }
+    }
+  }, [activeDispatcherId, dispatchers, setActiveDispatcher]);
 
   // Update time only on client to avoid hydration mismatch
   useEffect(() => {
@@ -77,6 +118,14 @@ export default function DispatcherDashboard() {
                     phone={incident.patient?.phone ?? undefined}
                     priority={incident.priority}
                     status={incident.status}
+                    onClick={() => {
+                      // When clicking on an incoming call, accept it if there's a Twilio call
+                      if (currentCall && callStatus === "incoming") {
+                        twilioAcceptCall();
+                      }
+                      // Navigate to incident page (will auto-accept there)
+                      router.push(`/dispatcher/${incident._id}`);
+                    }}
                   />
                 ))}
               </div>

@@ -1,0 +1,10 @@
+# Archivos temporales y de desarrollo
+.env.local.backup
+.env.local.prod
+.gitignore.local
+add-transcription.sh
+create-test-incident.sh
+create-test.sh
+test-prod-query.sh
+convex/addTranscription.ts
+convex/findIncident.ts

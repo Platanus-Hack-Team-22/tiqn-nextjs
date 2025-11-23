@@ -1,0 +1,6 @@
+# Archivos temporales y de desarrollo local
+.env.local.backup
+add-transcription.sh
+create-test*.sh
+convex/addTranscription.ts
+convex/findIncident.ts

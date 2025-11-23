@@ -4,7 +4,7 @@ import { useState } from "react";
 
 type EmergencyConfirmationPopupProps = {
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
 };
 
 export function EmergencyConfirmationPopup({

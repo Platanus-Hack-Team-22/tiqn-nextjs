@@ -136,3 +136,33 @@ export const listRecent = query({
       .take(limit);
   },
 });
+
+/**
+ * Update coordinates for an incident
+ */
+export const updateCoordinates = mutation({
+  args: {
+    callSessionId: v.string(),
+    coordinates: v.object({
+      lat: v.number(),
+      lng: v.number(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("incidents")
+      .withIndex("by_session", (q) => q.eq("callSessionId", args.callSessionId))
+      .first();
+
+    if (!existing) {
+      throw new Error(`Incident not found for session: ${args.callSessionId}`);
+    }
+
+    await ctx.db.patch(existing._id, {
+      coordinates: args.coordinates,
+      lastUpdated: Date.now(),
+    });
+
+    return existing._id;
+  },
+});

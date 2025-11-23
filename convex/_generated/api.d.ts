@@ -14,6 +14,7 @@ import type * as dispatchers from "../dispatchers.js";
 import type * as incidentAssignments from "../incidentAssignments.js";
 import type * as incidents from "../incidents.js";
 import type * as init from "../init.js";
+import type * as known_patient_records from "../known_patient_records.js";
 import type * as patients from "../patients.js";
 import type * as rescuers from "../rescuers.js";
 import type * as seedTestData from "../seedTestData.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   incidentAssignments: typeof incidentAssignments;
   incidents: typeof incidents;
   init: typeof init;
+  known_patient_records: typeof known_patient_records;
   patients: typeof patients;
   rescuers: typeof rescuers;
   seedTestData: typeof seedTestData;

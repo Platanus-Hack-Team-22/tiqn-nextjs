@@ -87,51 +87,51 @@ export function DataField({
   return (
     <div className={`relative ${className}`}>
       <div className="mb-1 flex items-center gap-2">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-[#1A1A1A]/70">
           {label}
         </span>
         {isDecoding && (
-          <div className="h-1 w-1 animate-pulse rounded-full bg-cyan-400" />
+          <div className="h-1 w-1 animate-pulse rounded-full bg-[#1A1A1A]" />
         )}
       </div>
       
-      <div className="relative min-h-[1.5em] overflow-hidden rounded border border-cyan-900/30 bg-slate-900/50 px-3 py-2 backdrop-blur-sm">
+      <div className="relative min-h-[1.5em] overflow-hidden rounded border border-[#E6DAC7] bg-[#FFFAF1] px-3 py-2 backdrop-blur-sm">
         {/* Loading State - Scanner */}
         {isLoading && (
           <div className="absolute inset-0 animate-scan opacity-50">
-             <div className="h-full w-full bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent" />
+             <div className="h-full w-full bg-gradient-to-r from-transparent via-[#1A1A1A]/10 to-transparent" />
           </div>
         )}
 
         {/* Particle Burst for Critical Fields */}
         {showBurst && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="h-full w-full animate-[particle-burst_0.6s_ease-out_forwards] rounded-full bg-cyan-400/20" />
-            <div className="absolute h-px w-full animate-[particle-burst_0.6s_ease-out_forwards] bg-cyan-400/50" />
-            <div className="absolute h-full w-px animate-[particle-burst_0.6s_ease-out_forwards] bg-cyan-400/50" />
+            <div className="h-full w-full animate-[particle-burst_0.6s_ease-out_forwards] rounded-full bg-[#1A1A1A]/20" />
+            <div className="absolute h-px w-full animate-[particle-burst_0.6s_ease-out_forwards] bg-[#1A1A1A]/30" />
+            <div className="absolute h-full w-px animate-[particle-burst_0.6s_ease-out_forwards] bg-[#1A1A1A]/30" />
           </div>
         )}
 
         {/* Content */}
         <div className={`font-mono text-sm ${
-          isDecoding ? "text-cyan-400" : "text-gray-100"
-        } ${!value && !isLoading ? "text-gray-700 italic" : ""}`}>
+          isDecoding ? "text-[#1A1A1A]" : "text-[#1A1A1A]"
+        } ${!value && !isLoading ? "text-[#1A1A1A]/50 italic" : ""}`}>
           {isLoading ? (
             <span className="opacity-0">Loading...</span>
           ) : displayValue ? (
             displayValue
           ) : (
-            <span className="select-none text-slate-700">---</span>
+            <span className="select-none text-[#1A1A1A]/40">---</span>
           )}
           {/* Blinking Cursor during decode */}
           {isDecoding && (
-            <span className="animate-pulse text-cyan-400">_</span>
+            <span className="animate-pulse text-[#1A1A1A]">_</span>
           )}
         </div>
         
         {/* Corner Accents for "Tech" feel */}
-        <div className="absolute left-0 top-0 h-2 w-2 border-l border-t border-cyan-500/20" />
-        <div className="absolute right-0 bottom-0 h-2 w-2 border-r border-b border-cyan-500/20" />
+        <div className="absolute left-0 top-0 h-2 w-2 border-l border-t border-[#E6DAC7]" />
+        <div className="absolute right-0 bottom-0 h-2 w-2 border-r border-b border-[#E6DAC7]" />
       </div>
     </div>
   );

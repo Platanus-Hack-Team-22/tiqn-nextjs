@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Device, type Call } from "@twilio/voice-sdk";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { DataField } from "../components/DataField";
 import { DashboardCharts } from "../components/DashboardCharts";
+import { AudioVisualizer } from "../components/AudioVisualizer";
 
 type CallStatus =
   | "initializing"
@@ -42,17 +43,39 @@ export default function Home() {
   const [persistedIncident, setPersistedIncident] = useState<typeof incident>(null);
   const [showSkeletons, setShowSkeletons] = useState(false);
 
-  // Calculate stats from recent incidents
-  const stats = useMemo(() => {
-    if (!recentIncidents) return { active: 0, critical: 0, units: 0, total: 0 };
-    
-    return {
-      active: recentIncidents.filter(i => ["confirmed", "rescuer_assigned", "in_progress"].includes(i.status)).length,
-      critical: recentIncidents.filter(i => i.priority === "critical" && ["confirmed", "rescuer_assigned", "in_progress"].includes(i.status)).length,
-      units: recentIncidents.filter(i => ["rescuer_assigned", "in_progress"].includes(i.status)).length,
-      total: recentIncidents.length
-    };
-  }, [recentIncidents]);
+  // Mock stats - dynamic emergency statistics
+  // Use fixed initial values to prevent hydration mismatch
+  const [mockStats, setMockStats] = useState({
+    active: 15,
+    critical: 4,
+    units: 10,
+    total: 25,
+  });
+
+  // Initialize with random values only on client side after mount
+  useEffect(() => {
+    setMockStats({
+      active: 12 + Math.floor(Math.random() * 8), // 12-19
+      critical: 3 + Math.floor(Math.random() * 4), // 3-6
+      units: 8 + Math.floor(Math.random() * 6), // 8-13
+      total: 20 + Math.floor(Math.random() * 15), // 20-34
+    });
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMockStats(prev => ({
+        active: Math.max(5, Math.min(25, prev.active + Math.floor((Math.random() - 0.5) * 4))),
+        critical: Math.max(0, Math.min(10, prev.critical + Math.floor((Math.random() - 0.5) * 2))),
+        units: Math.max(3, Math.min(18, prev.units + Math.floor((Math.random() - 0.5) * 3))),
+        total: Math.max(15, Math.min(50, prev.total + Math.floor((Math.random() - 0.5) * 3))),
+      }));
+    }, 5000); // Update every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  // Use mocked stats instead of calculated ones
+  const stats = mockStats;
 
   // Use active incident if available, otherwise show persisted data
   const displayIncident = incident ?? persistedIncident;
@@ -259,30 +282,30 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 bg-grid-pattern p-6 text-gray-100">
+    <main className="min-h-screen bg-[#FFF2DC] bg-grid-pattern p-6 text-[#1A1A1A]">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8 border-b border-cyan-900/50 pb-6">
+        <div className="mb-8 border-b border-[#E6DAC7] pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-light tracking-wide text-cyan-400">EMERGENCY DISPATCH SYSTEM</h1>
-              <p className="mt-1 font-mono text-sm text-gray-400">
+              <h1 className="text-3xl font-light tracking-wide text-[#1A1A1A]">EMERGENCY DISPATCH SYSTEM</h1>
+              <p className="mt-1 font-mono text-sm text-[#1A1A1A]/80">
                 {identity ? `OPERATOR: ${identity}` : "INITIALIZING..."}
               </p>
             </div>
             <div className={`flex items-center gap-3 rounded border px-4 py-2 font-mono text-sm ${
               callStatus === "incoming"
-                ? "animate-pulse border-amber-500/50 bg-amber-500/10 text-amber-400"
+                ? "animate-pulse border-amber-600/40 bg-amber-50 text-amber-700"
                 : callStatus === "connected"
-                  ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                  ? "border-[#1A1A1A]/30 bg-[#FFFAF1] text-[#1A1A1A] shadow-[0_2px_8px_rgba(26,26,26,0.15)]"
                   : callStatus === "ready"
-                    ? "border-gray-600/50 bg-gray-800/50 text-gray-400"
-                    : "border-red-500/50 bg-red-500/10 text-red-400"
+                    ? "border-[#E6DAC7] bg-[#FFFAF1] text-[#1A1A1A]/80"
+                    : "border-red-600/40 bg-red-50 text-red-700"
             }`}>
               <div className={`h-2 w-2 rounded-full ${
-                callStatus === "incoming" ? "bg-amber-400 animate-pulse" :
-                callStatus === "connected" ? "bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" :
-                callStatus === "ready" ? "bg-gray-400" : "bg-red-400"
+                callStatus === "incoming" ? "bg-amber-600 animate-pulse" :
+                callStatus === "connected" ? "bg-[#1A1A1A] shadow-[0_0_8px_rgba(26,26,26,0.4)]" :
+                callStatus === "ready" ? "bg-[#1A1A1A]/50" : "bg-red-600"
               }`} />
               STATUS: {callStatus.toUpperCase()}
             </div>
@@ -292,11 +315,11 @@ export default function Home() {
         {/* Dispatcher Selection - Only show when not connected */}
         {callStatus !== "connected" && (
           <div className="mb-6 w-full max-w-md">
-            <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-gray-400">
+            <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-[#1A1A1A]/80">
               Dispatcher
             </label>
             <select
-              className="w-full rounded border border-gray-700 bg-slate-900 p-3 font-mono text-sm text-gray-100 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              className="w-full rounded border border-[#E6DAC7] bg-[#FFFAF1] p-3 font-mono text-sm text-[#1A1A1A] focus:border-[#1A1A1A] focus:outline-none focus:ring-1 focus:ring-[#1A1A1A]"
               value={selectedDispatcherId}
               onChange={(e) => handleDispatcherChange(e.target.value)}
             >
@@ -320,13 +343,13 @@ export default function Home() {
               <div className="mb-6 flex gap-4">
                 <button
                   onClick={handleAccept}
-                  className="flex-1 rounded border border-cyan-500/50 bg-cyan-500/10 px-8 py-4 font-mono text-sm uppercase tracking-wide text-cyan-400 transition hover:bg-cyan-500/20 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                  className="flex-1 rounded border border-[#1A1A1A]/30 bg-[#FFFAF1] px-8 py-4 font-mono text-sm uppercase tracking-wide text-[#1A1A1A] transition hover:bg-[#E6DAC7]/30 hover:shadow-[0_2px_8px_rgba(26,26,26,0.2)]"
                 >
                   Accept Call
                 </button>
                 <button
                   onClick={handleDecline}
-                  className="flex-1 rounded border border-red-500/50 bg-red-500/10 px-8 py-4 font-mono text-sm uppercase tracking-wide text-red-400 transition hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                  className="flex-1 rounded border border-red-600/40 bg-red-50 px-8 py-4 font-mono text-sm uppercase tracking-wide text-red-700 transition hover:bg-red-100 hover:shadow-[0_2px_8px_rgba(220,38,38,0.2)]"
                 >
                   Decline
                 </button>
@@ -337,22 +360,22 @@ export default function Home() {
               <div className="mb-6 flex gap-4">
                 <button
                   onClick={handleDisconnect}
-                  className="rounded border border-red-500/50 bg-red-500/10 px-8 py-3 font-mono text-sm uppercase tracking-wide text-red-400 transition hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                  className="rounded border border-red-600/40 bg-red-50 px-8 py-3 font-mono text-sm uppercase tracking-wide text-red-700 transition hover:bg-red-100 hover:shadow-[0_2px_8px_rgba(220,38,38,0.2)]"
                 >
                   End Call
                 </button>
                 {displayIncident && !incidentApproved && (
                   <button
                     onClick={handleApproveIncident}
-                    className="rounded border border-amber-500/50 bg-amber-500/10 px-8 py-3 font-mono text-sm uppercase tracking-wide text-amber-400 transition hover:bg-amber-500/20 hover:shadow-[0_0_20px_rgba(251,191,36,0.4)]"
+                    className="rounded border border-amber-600/40 bg-amber-50 px-8 py-3 font-mono text-sm uppercase tracking-wide text-amber-700 transition hover:bg-amber-100 hover:shadow-[0_2px_8px_rgba(217,119,6,0.2)]"
                   >
                     Approve Emergency
                   </button>
                 )}
                 {displayIncident && incidentApproved && (
-                  <div className="flex items-center gap-2 rounded border border-cyan-500/50 bg-cyan-500/10 px-6 py-3">
-                    <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-                    <span className="font-mono text-sm uppercase tracking-wide text-cyan-400">Emergency Approved</span>
+                  <div className="flex items-center gap-2 rounded border border-[#1A1A1A]/30 bg-[#FFFAF1] px-6 py-3">
+                    <div className="h-2 w-2 rounded-full bg-[#1A1A1A] shadow-[0_0_8px_rgba(26,26,26,0.4)]" />
+                    <span className="font-mono text-sm uppercase tracking-wide text-[#1A1A1A]">Emergency Approved</span>
                   </div>
                 )}
               </div>
@@ -365,74 +388,89 @@ export default function Home() {
               <div className="space-y-6 lg:col-span-2">
                 {/* Patient Vitals */}
                 <div className="glass-card rounded-lg p-5">
-                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                  <h4 className="mb-4 border-b border-[#E6DAC7] pb-2 font-mono text-xs uppercase tracking-wider text-[#1A1A1A]">
                     Patient Vitals
                   </h4>
                   <div className="space-y-3">
+                    {/* Name - full width */}
                     <DataField
                       label="Name"
                       value={displayIncident?.firstName ?? displayIncident?.lastName ? `${displayIncident.firstName ?? ''} ${displayIncident.lastName ?? ''}`.trim() : null}
                       isLoading={showSkeletons && !displayIncident?.firstName}
                       isCritical={true}
                     />
-                    <DataField
-                      label="Age"
-                      value={displayIncident?.patientAge}
-                      isLoading={showSkeletons && !displayIncident?.patientAge}
-                    />
-                    <DataField
-                      label="Sex"
-                      value={displayIncident?.patientSex}
-                      isLoading={showSkeletons && !displayIncident?.patientSex}
-                    />
-                    <div className="border-t border-cyan-500/10 pt-3">
+                    {/* Age and Sex - 2 columns */}
+                    <div className="grid grid-cols-2 gap-3">
                       <DataField
-                        label="Consciousness"
-                        value={displayIncident?.consciousness}
-                        isLoading={showSkeletons && !displayIncident?.consciousness}
-                        className={displayIncident?.consciousness ? "text-cyan-300" : ""}
+                        label="Age"
+                        value={displayIncident?.patientAge}
+                        isLoading={showSkeletons && !displayIncident?.patientAge}
+                      />
+                      <DataField
+                        label="Sex"
+                        value={displayIncident?.patientSex}
+                        isLoading={showSkeletons && !displayIncident?.patientSex}
                       />
                     </div>
-                    <DataField
-                      label="Breathing"
-                      value={displayIncident?.breathing}
-                      isLoading={showSkeletons && !displayIncident?.breathing}
-                    />
-                    <DataField
-                      label="AVDI"
-                      value={displayIncident?.avdi}
-                      isLoading={showSkeletons && !displayIncident?.avdi}
-                    />
-                    <DataField
-                      label="Respiratory"
-                      value={displayIncident?.respiratoryStatus}
-                      isLoading={showSkeletons && !displayIncident?.respiratoryStatus}
-                    />
+                    {/* Breathing and AVDI - 2 columns */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <DataField
+                        label="Breathing"
+                        value={displayIncident?.breathing}
+                        isLoading={showSkeletons && !displayIncident?.breathing}
+                      />
+                      <DataField
+                        label="AVDI"
+                        value={displayIncident?.avdi}
+                        isLoading={showSkeletons && !displayIncident?.avdi}
+                      />
+                    </div>
+                    {/* Consciousness and Respiratory - 2 columns with border */}
+                    <div className="border-t border-[#E6DAC7] pt-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <DataField
+                          label="Consciousness"
+                          value={displayIncident?.consciousness}
+                          isLoading={showSkeletons && !displayIncident?.consciousness}
+                          className={displayIncident?.consciousness ? "text-[#1A1A1A]" : ""}
+                        />
+                        <DataField
+                          label="Respiratory"
+                          value={displayIncident?.respiratoryStatus}
+                          isLoading={showSkeletons && !displayIncident?.respiratoryStatus}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Location */}
                 <div className="glass-card rounded-lg p-5">
-                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                  <h4 className="mb-4 border-b border-[#E6DAC7] pb-2 font-mono text-xs uppercase tracking-wider text-[#1A1A1A]">
                     Location
                   </h4>
                   <div className="space-y-3">
+                    {/* Address - full width */}
                     <DataField
                       label="Address"
                       value={displayIncident?.address}
                       isLoading={showSkeletons && !displayIncident?.address}
                       isCritical={true}
                     />
-                    <DataField
-                      label="District"
-                      value={displayIncident?.district}
-                      isLoading={showSkeletons && !displayIncident?.district}
-                    />
-                    <DataField
-                      label="Apt/Unit"
-                      value={displayIncident?.apartment}
-                      isLoading={showSkeletons && !displayIncident?.apartment}
-                    />
+                    {/* District and Apt/Unit - 2 columns */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <DataField
+                        label="District"
+                        value={displayIncident?.district}
+                        isLoading={showSkeletons && !displayIncident?.district}
+                      />
+                      <DataField
+                        label="Apt/Unit"
+                        value={displayIncident?.apartment}
+                        isLoading={showSkeletons && !displayIncident?.apartment}
+                      />
+                    </div>
+                    {/* Reference - full width */}
                     <DataField
                       label="Reference"
                       value={displayIncident?.reference}
@@ -443,7 +481,7 @@ export default function Home() {
 
                 {/* Medical Details */}
                 <div className="glass-card rounded-lg p-5">
-                  <h4 className="mb-4 border-b border-cyan-500/20 pb-2 font-mono text-xs uppercase tracking-wider text-cyan-400">
+                  <h4 className="mb-4 border-b border-[#E6DAC7] pb-2 font-mono text-xs uppercase tracking-wider text-[#1A1A1A]">
                     Medical Info
                   </h4>
                   <div className="space-y-3">
@@ -462,43 +500,51 @@ export default function Home() {
                       value={displayIncident?.currentMedications}
                       isLoading={showSkeletons && !displayIncident?.currentMedications}
                     />
-                    <DataField
-                      label="Allergies"
-                      value={displayIncident?.allergies}
-                      isLoading={showSkeletons && !displayIncident?.allergies}
-                      className={displayIncident?.allergies ? "text-amber-300" : ""}
-                    />
-                    <DataField
-                      label="Vital Signs"
-                      value={displayIncident?.vitalSigns}
-                      isLoading={showSkeletons && !displayIncident?.vitalSigns}
-                    />
+                    {/* Allergies and Vital Signs - 2 columns */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <DataField
+                        label="Allergies"
+                        value={displayIncident?.allergies}
+                        isLoading={showSkeletons && !displayIncident?.allergies}
+                        className={displayIncident?.allergies ? "text-amber-700" : ""}
+                      />
+                      <DataField
+                        label="Vital Signs"
+                        value={displayIncident?.vitalSigns}
+                        isLoading={showSkeletons && !displayIncident?.vitalSigns}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Right Column: Live Transcript (60%) */}
               <div className="lg:col-span-3">
-                <div className="glass-card flex h-full flex-col rounded-lg p-1 shadow-[0_0_30px_rgba(6,182,212,0.05)]">
-                  <div className="border-b border-cyan-500/20 p-4">
+                <div className="glass-card flex h-full flex-col rounded-lg p-1 shadow-[0_2px_12px_rgba(26,26,26,0.08)]">
+                  <div className="border-b border-[#E6DAC7] p-4">
                      <div className="flex items-center justify-between">
-                      <h4 className="font-mono text-xs uppercase tracking-wider text-cyan-400">
+                      <h4 className="font-mono text-xs uppercase tracking-wider text-[#1A1A1A]">
                         {callStatus === "connected" ? "Live Audio Feed" : "Transcript Log"}
                       </h4>
                       {callStatus === "connected" && (
                         <div className="flex items-center gap-2">
-                          <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
-                          <span className="font-mono text-[10px] text-red-400">RECORDING</span>
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-red-600"></span>
+                          <span className="font-mono text-[10px] text-red-700">RECORDING</span>
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  <div className="relative flex-1 overflow-hidden bg-slate-950/50 p-6">
-                    {/* Fade out mask at top */}
-                    <div className="pointer-events-none absolute left-0 top-0 z-10 h-12 w-full bg-gradient-to-b from-slate-950 to-transparent" />
+                  <div className="relative flex-1 overflow-hidden bg-[#FFFAF1]/50 p-6">
+                    {/* Audio Visualizer - shown when call is connected at the top */}
+                    {callStatus === "connected" && (
+                      <AudioVisualizer isActive={callStatus === "connected"} />
+                    )}
                     
-                    <div className="h-[600px] space-y-4 overflow-y-auto pr-2">
+                    {/* Fade out mask at top (below visualizer) */}
+                    <div className={`pointer-events-none absolute left-0 z-10 w-full bg-gradient-to-b from-[#FFFAF1] to-transparent ${callStatus === "connected" ? "top-24 h-12" : "top-0 h-12"}`} />
+                    
+                    <div className={`h-[600px] space-y-4 overflow-y-auto pr-2 ${callStatus === "connected" ? "pt-28 pb-4" : "pt-0 pb-4"}`}>
                       {displayIncident?.fullTranscript ? (
                         <>
                           {(() => {
@@ -517,19 +563,19 @@ export default function Home() {
                             return messages.map((message, idx) => (
                               <div
                                 key={idx}
-                                className={`animate-fade-in-up relative rounded-xl border border-cyan-500/10 bg-slate-900/80 p-4 backdrop-blur-md transition-all hover:border-cyan-500/30 hover:bg-slate-800/80 ${
-                                  idx === messages.length - 1 ? "border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]" : ""
+                                className={`animate-fade-in-up relative rounded-xl border border-[#E6DAC7]/40 bg-[#FFFAF1]/80 p-4 backdrop-blur-md transition-all hover:border-[#E6DAC7]/60 hover:bg-[#FFFAF1] ${
+                                  idx === messages.length - 1 ? "border-[#1A1A1A]/30 shadow-[0_2px_8px_rgba(26,26,26,0.1)]" : ""
                                 }`}
                               >
                                 {/* Message Index/Time decoration */}
                                 <div className="absolute -left-3 top-4 flex items-center">
-                                  <div className="h-px w-3 bg-cyan-500/30" />
+                                  <div className="h-px w-3 bg-[#E6DAC7]" />
                                   <div className={`h-1.5 w-1.5 rounded-full ${
-                                    idx === messages.length - 1 ? "animate-pulse bg-cyan-400" : "bg-cyan-900"
+                                    idx === messages.length - 1 ? "animate-pulse bg-[#1A1A1A]" : "bg-[#E6DAC7]"
                                   }`} />
                                 </div>
                                 
-                                <p className="font-mono text-sm leading-relaxed text-gray-300">
+                                <p className="font-mono text-sm leading-relaxed text-[#1A1A1A]">
                                   {message.trim()}
                                 </p>
                               </div>
@@ -544,14 +590,14 @@ export default function Home() {
                             {callStatus === "connected" ? (
                               <div className="flex flex-col items-center gap-4">
                                 <div className="relative h-12 w-12">
-                                  <div className="absolute inset-0 animate-ping rounded-full bg-cyan-500/20" />
-                                  <div className="absolute inset-0 animate-pulse rounded-full border border-cyan-500/50" />
-                                  <div className="absolute inset-3 animate-spin rounded-full border-t-2 border-cyan-400" />
+                                  <div className="absolute inset-0 animate-ping rounded-full bg-[#1A1A1A]/20" />
+                                  <div className="absolute inset-0 animate-pulse rounded-full border border-[#1A1A1A]/30" />
+                                  <div className="absolute inset-3 animate-spin rounded-full border-t-2 border-[#1A1A1A]" />
                                 </div>
-                                <p className="font-mono text-sm text-cyan-500/70">AWAITING AUDIO STREAM...</p>
+                                <p className="font-mono text-sm text-[#1A1A1A]/80">AWAITING AUDIO STREAM...</p>
                               </div>
                             ) : (
-                              <p className="font-mono text-sm text-gray-700">NO TRANSCRIPT DATA</p>
+                              <p className="font-mono text-sm text-[#1A1A1A]/60">NO TRANSCRIPT DATA</p>
                             )}
                           </div>
                         </div>
@@ -571,43 +617,43 @@ export default function Home() {
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="glass-card flex flex-col justify-between rounded-lg p-5">
               <div className="flex items-start justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-cyan-500/70">Active Incidents</span>
-                <div className="h-2 w-2 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+                <span className="font-mono text-xs uppercase tracking-wider text-[#1A1A1A]/80">Active Incidents</span>
+                <div className="h-2 w-2 animate-pulse rounded-full bg-[#1A1A1A] shadow-[0_0_8px_rgba(26,26,26,0.3)]" />
               </div>
               <div className="mt-2">
-                <span className="font-mono text-4xl font-light text-gray-100">{stats.active}</span>
+                <span className="font-mono text-4xl font-light text-[#1A1A1A]" suppressHydrationWarning>{stats.active}</span>
               </div>
             </div>
 
-            <div className="glass-card flex flex-col justify-between rounded-lg border-red-500/20 p-5 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+            <div className="glass-card flex flex-col justify-between rounded-lg border-red-600/20 p-5 shadow-[0_2px_8px_rgba(220,38,38,0.08)]">
               <div className="flex items-start justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-red-400/70">Critical Alerts</span>
+                <span className="font-mono text-xs uppercase tracking-wider text-red-700/70">Critical Alerts</span>
                 {stats.critical > 0 && (
-                  <div className="h-2 w-2 animate-[ping_1.5s_linear_infinite] rounded-full bg-red-500 opacity-75" />
+                  <div className="h-2 w-2 animate-[ping_1.5s_linear_infinite] rounded-full bg-red-600 opacity-75" />
                 )}
               </div>
               <div className="mt-2">
-                <span className="font-mono text-4xl font-light text-red-400">{stats.critical}</span>
+                <span className="font-mono text-4xl font-light text-red-700" suppressHydrationWarning>{stats.critical}</span>
               </div>
             </div>
 
-            <div className="glass-card flex flex-col justify-between rounded-lg border-amber-500/20 p-5 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+            <div className="glass-card flex flex-col justify-between rounded-lg border-amber-600/20 p-5 shadow-[0_2px_8px_rgba(217,119,6,0.08)]">
               <div className="flex items-start justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-amber-400/70">Units Deployed</span>
-                <div className="h-2 w-2 rounded-full bg-amber-500/50" />
+                <span className="font-mono text-xs uppercase tracking-wider text-amber-700/70">Units Deployed</span>
+                <div className="h-2 w-2 rounded-full bg-amber-600/50" />
               </div>
               <div className="mt-2">
-                <span className="font-mono text-4xl font-light text-amber-400">{stats.units}</span>
+                <span className="font-mono text-4xl font-light text-amber-700" suppressHydrationWarning>{stats.units}</span>
               </div>
             </div>
 
-            <div className="glass-card flex flex-col justify-between rounded-lg border-gray-700/50 p-5">
+            <div className="glass-card flex flex-col justify-between rounded-lg border-[#E6DAC7] p-5">
               <div className="flex items-start justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-gray-500">Total (24h)</span>
-                <div className="h-2 w-2 rounded-full bg-gray-700" />
+                <span className="font-mono text-xs uppercase tracking-wider text-[#1A1A1A]/70">Total (24h)</span>
+                <div className="h-2 w-2 rounded-full bg-[#E6DAC7]" />
               </div>
               <div className="mt-2">
-                <span className="font-mono text-4xl font-light text-gray-400">{stats.total}</span>
+                <span className="font-mono text-4xl font-light text-[#1A1A1A]/90" suppressHydrationWarning>{stats.total}</span>
               </div>
             </div>
           </div>
@@ -617,7 +663,7 @@ export default function Home() {
             <DashboardCharts />
           </div>
 
-          <h2 className="mb-6 border-b border-cyan-900/50 pb-3 font-mono text-xl uppercase tracking-wide text-cyan-400">
+          <h2 className="mb-6 border-b border-[#E6DAC7] pb-3 font-mono text-xl uppercase tracking-wide text-[#1A1A1A]">
             Recent Incidents
           </h2>
 
@@ -626,30 +672,30 @@ export default function Home() {
               {recentIncidents.map((inc) => (
                 <div
                   key={inc._id}
-                  className="rounded-lg border border-cyan-500/30 bg-slate-900/50 p-4 shadow-lg transition hover:border-cyan-500/50 hover:shadow-cyan-500/10"
+                  className="rounded-lg border border-[#E6DAC7] bg-[#FFFAF1]/80 p-4 shadow-lg transition hover:border-[#1A1A1A]/30 hover:shadow-[0_4px_12px_rgba(26,26,26,0.1)]"
                 >
                   {/* Header */}
-                  <div className="mb-3 flex items-start justify-between border-b border-cyan-500/20 pb-2">
+                  <div className="mb-3 flex items-start justify-between border-b border-[#E6DAC7] pb-2">
                     <div>
-                      <div className="font-mono text-xs text-gray-500">
+                      <div className="font-mono text-xs text-[#1A1A1A]/70">
                         {inc.lastUpdated
                           ? new Date(inc.lastUpdated).toLocaleString('es-CL')
                           : 'No date'}
                       </div>
-                      <div className="mt-1 font-semibold text-gray-100">
+                      <div className="mt-1 font-semibold text-[#1A1A1A]">
                         {inc.firstName ?? ''} {inc.lastName ?? ''}
-                        {!inc.firstName && !inc.lastName && <span className="text-gray-500 italic">Unknown</span>}
+                        {!inc.firstName && !inc.lastName && <span className="text-[#1A1A1A]/60 italic">Unknown</span>}
                       </div>
                     </div>
                     <div
                       className={`rounded px-2 py-1 font-mono text-xs ${
                         inc.priority === 'critical'
-                          ? 'bg-red-500/20 text-red-400'
+                          ? 'bg-red-100 text-red-700'
                           : inc.priority === 'high'
-                            ? 'bg-orange-500/20 text-orange-400'
+                            ? 'bg-orange-100 text-orange-700'
                             : inc.priority === 'medium'
-                              ? 'bg-yellow-500/20 text-yellow-400'
-                              : 'bg-gray-500/20 text-gray-400'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-[#E6DAC7] text-[#1A1A1A]/80'
                       }`}
                     >
                       {inc.priority?.toUpperCase()}
@@ -660,54 +706,54 @@ export default function Home() {
                   <div className="space-y-2 text-sm">
                     {inc.address && (
                       <div>
-                        <span className="font-mono text-xs text-gray-500">📍 </span>
-                        <span className="text-gray-300">{inc.address}</span>
+                        <span className="font-mono text-xs text-[#1A1A1A]/70">📍 </span>
+                        <span className="text-[#1A1A1A]">{inc.address}</span>
                       </div>
                     )}
                     {inc.consciousness && (
                       <div>
-                        <span className="font-mono text-xs text-gray-500">🧠 </span>
-                        <span className="text-cyan-300">{inc.consciousness}</span>
+                        <span className="font-mono text-xs text-[#1A1A1A]/70">🧠 </span>
+                        <span className="text-[#1A1A1A]">{inc.consciousness}</span>
                       </div>
                     )}
                     {inc.breathing && (
                       <div>
-                        <span className="font-mono text-xs text-gray-500">💨 </span>
-                        <span className="text-cyan-300">{inc.breathing}</span>
+                        <span className="font-mono text-xs text-[#1A1A1A]/70">💨 </span>
+                        <span className="text-[#1A1A1A]">{inc.breathing}</span>
                       </div>
                     )}
                     {inc.description && (
-                      <div className="mt-2 truncate text-xs text-gray-400">
+                      <div className="mt-2 truncate text-xs text-[#1A1A1A]/80">
                         {inc.description}
                       </div>
                     )}
                   </div>
 
                   {/* Footer */}
-                  <div className="mt-3 border-t border-cyan-500/10 pt-2">
-                    <div className="font-mono text-xs text-gray-600">
-                      Status: <span className="text-gray-400">{inc.status}</span>
+                  <div className="mt-3 border-t border-[#E6DAC7] pt-2">
+                    <div className="font-mono text-xs text-[#1A1A1A]/70">
+                      Status: <span className="text-[#1A1A1A]/90">{inc.status}</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-gray-700/50 bg-slate-900/30 p-12 text-center">
-              <p className="font-mono text-gray-600 italic">No incidents recorded yet</p>
+            <div className="rounded-lg border border-[#E6DAC7] bg-[#FFFAF1]/50 p-12 text-center">
+              <p className="font-mono text-[#1A1A1A]/70 italic">No incidents recorded yet</p>
             </div>
           )}
         </div>
 
         {/* System Logs */}
         <div className="mt-6 w-full">
-          <div className="rounded border border-gray-700/50 bg-slate-900/30 p-4">
-            <h3 className="mb-3 border-b border-gray-700/50 pb-2 font-mono text-xs uppercase tracking-wider text-gray-500">
+          <div className="rounded border border-[#E6DAC7] bg-[#FFFAF1]/50 p-4">
+            <h3 className="mb-3 border-b border-[#E6DAC7] pb-2 font-mono text-xs uppercase tracking-wider text-[#1A1A1A]/80">
               System Logs
             </h3>
-            <div className="h-32 overflow-y-auto rounded border border-gray-800/50 bg-black/30 p-3 font-mono text-xs text-cyan-500/70">
+            <div className="h-32 overflow-y-auto rounded border border-[#E6DAC7] bg-[#FFFAF1] p-3 font-mono text-xs text-[#1A1A1A]/80">
               {logs.length === 0 ? (
-                <span className="text-gray-700 italic">
+                <span className="text-[#1A1A1A]/60 italic">
                   System logs will appear here...
                 </span>
               ) : (

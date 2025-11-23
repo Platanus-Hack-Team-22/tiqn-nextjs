@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Device, type Call } from "@twilio/voice-sdk";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { Id, Doc } from "../../convex/_generated/dataModel";
 import { DataField } from "../components/DataField";
 import { DashboardCharts } from "../components/DashboardCharts";
 import { AudioVisualizer } from "../components/AudioVisualizer";
@@ -42,6 +42,13 @@ export default function Home() {
   const [incidentApproved, setIncidentApproved] = useState(false);
   const [persistedIncident, setPersistedIncident] = useState<typeof incident>(null);
   const [showSkeletons, setShowSkeletons] = useState(false);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<Id<"incidents"> | null>(null);
+  const selectedIncident = useQuery(
+    api.incidents.get,
+    selectedIncidentId ? { id: selectedIncidentId } : "skip"
+  );
+  const [selectedIncidentPreview, setSelectedIncidentPreview] = useState<typeof incident>(null);
+  const [urgentLoadingId, setUrgentLoadingId] = useState<Id<"incidents"> | null>(null);
 
   // Mock stats - dynamic emergency statistics
   // Use fixed initial values to prevent hydration mismatch
@@ -77,8 +84,15 @@ export default function Home() {
   // Use mocked stats instead of calculated ones
   const stats = mockStats;
 
-  // Use active incident if available, otherwise show persisted data
-  const displayIncident = incident ?? persistedIncident;
+  // Use active incident if available, otherwise show selected incident, otherwise show persisted data
+  const displayIncident =
+    incident ?? selectedIncident ?? selectedIncidentPreview ?? persistedIncident;
+
+  // Check if incident has assignment
+  const getAssignmentByIncident = useQuery(
+    api.incidentAssignments.getByIncident,
+    displayIncident?._id ? { incidentId: displayIncident._id } : "skip"
+  );
 
   // Show skeleton loaders after 2 seconds of accepting call
   useEffect(() => {
@@ -97,8 +111,18 @@ export default function Home() {
   useEffect(() => {
     if (incident) {
       setPersistedIncident(incident);
+      console.log("[IncidentSelect] Active incident updated", incident?._id);
     }
   }, [incident]);
+
+  useEffect(() => {
+    if (selectedIncidentId) {
+      console.log("[IncidentSelect] selectedIncidentId effect", {
+        selectedIncidentId,
+        preview: selectedIncidentPreview?._id,
+      });
+    }
+  }, [selectedIncidentId, selectedIncidentPreview?._id]);
 
   const addLog = useCallback((msg: string) => {
     const time =
@@ -281,6 +305,38 @@ export default function Home() {
     }
   };
 
+  const handleSelectIncident = (incidentData: Doc<"incidents">) => {
+    console.log("[IncidentSelect] Card click", incidentData._id);
+    setSelectedIncidentId(incidentData._id);
+    setSelectedIncidentPreview(incidentData);
+    setIncidentApproved(false); // Reset approval state when selecting a new incident
+    addLog(`Selected incident: ${incidentData._id}`);
+    console.log("[IncidentSelect] State update queued", {
+      selectedIncidentId: incidentData._id,
+      hasTranscript: Boolean(incidentData.fullTranscript),
+    });
+    // Scroll to top to show the incident details
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleMarkUrgent = async (incidentId: Id<"incidents">) => {
+    setUrgentLoadingId(incidentId);
+    addLog(`Marking incident ${incidentId} as urgent...`);
+    try {
+      await createPendingAssignment({ incidentId });
+      addLog(`Incident ${incidentId} escalated to urgent assignment`);
+    } catch (e) {
+      addLog(`Error escalating incident ${incidentId}: ${e as string}`);
+    } finally {
+      setUrgentLoadingId(null);
+    }
+  };
+
+  // Check if incident has assignment (either from query or from state)
+  const hasAssignment = (getAssignmentByIncident !== undefined && getAssignmentByIncident !== null) || incidentApproved;
+
   return (
     <main className="min-h-screen bg-[#FFF2DC] bg-grid-pattern p-6 text-[#1A1A1A]">
       <div className="mx-auto max-w-7xl">
@@ -337,6 +393,23 @@ export default function Home() {
 
         {/* === ACTIVE INCIDENT SECTION === */}
         {(callStatus === "incoming" || callStatus === "connected" || displayIncident) && (
+          <>
+            {/* Close button when viewing selected incident */}
+            {selectedIncidentId && callStatus !== "connected" && callStatus !== "incoming" && (
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    setSelectedIncidentId(null);
+                    setSelectedIncidentPreview(null);
+                    setIncidentApproved(false);
+                    addLog("Closed incident view");
+                  }}
+                  className="rounded border border-[#E6DAC7] bg-[#FFFAF1] px-4 py-2 font-mono text-xs uppercase tracking-wide text-[#1A1A1A] transition hover:bg-[#E6DAC7]/30 hover:shadow-[0_2px_8px_rgba(26,26,26,0.1)]"
+                >
+                  ← Close Incident View
+                </button>
+              </div>
+            )}
           <div className="mb-8">
             {/* Call Controls */}
             {callStatus === "incoming" && (
@@ -356,15 +429,17 @@ export default function Home() {
               </div>
             )}
 
-            {callStatus === "connected" && (
+            {(callStatus === "connected" || selectedIncidentId) && (
               <div className="mb-6 flex gap-4">
-                <button
-                  onClick={handleDisconnect}
-                  className="rounded border border-red-600/40 bg-red-50 px-8 py-3 font-mono text-sm uppercase tracking-wide text-red-700 transition hover:bg-red-100 hover:shadow-[0_2px_8px_rgba(220,38,38,0.2)]"
-                >
-                  End Call
-                </button>
-                {displayIncident && !incidentApproved && (
+                {callStatus === "connected" && (
+                  <button
+                    onClick={handleDisconnect}
+                    className="rounded border border-red-600/40 bg-red-50 px-8 py-3 font-mono text-sm uppercase tracking-wide text-red-700 transition hover:bg-red-100 hover:shadow-[0_2px_8px_rgba(220,38,38,0.2)]"
+                  >
+                    End Call
+                  </button>
+                )}
+                {displayIncident && !hasAssignment && (
                   <button
                     onClick={handleApproveIncident}
                     className="rounded border border-amber-600/40 bg-amber-50 px-8 py-3 font-mono text-sm uppercase tracking-wide text-amber-700 transition hover:bg-amber-100 hover:shadow-[0_2px_8px_rgba(217,119,6,0.2)]"
@@ -372,7 +447,7 @@ export default function Home() {
                     Approve Emergency
                   </button>
                 )}
-                {displayIncident && incidentApproved && (
+                {displayIncident && hasAssignment && (
                   <div className="flex items-center gap-2 rounded border border-[#1A1A1A]/30 bg-[#FFFAF1] px-6 py-3">
                     <div className="h-2 w-2 rounded-full bg-[#1A1A1A] shadow-[0_0_8px_rgba(26,26,26,0.4)]" />
                     <span className="font-mono text-sm uppercase tracking-wide text-[#1A1A1A]">Emergency Approved</span>
@@ -609,6 +684,7 @@ export default function Home() {
             </div>
           )}
           </div>
+          </>
         )}
 
         {/* === INCIDENTS HISTORY SECTION === */}
@@ -672,7 +748,20 @@ export default function Home() {
               {recentIncidents.map((inc) => (
                 <div
                   key={inc._id}
-                  className="rounded-lg border border-[#E6DAC7] bg-[#FFFAF1]/80 p-4 shadow-lg transition hover:border-[#1A1A1A]/30 hover:shadow-[0_4px_12px_rgba(26,26,26,0.1)]"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelectIncident(inc);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleSelectIncident(inc);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded-lg border border-[#E6DAC7] bg-[#FFFAF1]/80 p-4 shadow-lg transition hover:border-[#1A1A1A]/30 hover:shadow-[0_4px_12px_rgba(26,26,26,0.1)] active:scale-[0.98]"
                 >
                   {/* Header */}
                   <div className="mb-3 flex items-start justify-between border-b border-[#E6DAC7] pb-2">
@@ -687,18 +776,34 @@ export default function Home() {
                         {!inc.firstName && !inc.lastName && <span className="text-[#1A1A1A]/60 italic">Unknown</span>}
                       </div>
                     </div>
-                    <div
-                      className={`rounded px-2 py-1 font-mono text-xs ${
-                        inc.priority === 'critical'
-                          ? 'bg-red-100 text-red-700'
-                          : inc.priority === 'high'
-                            ? 'bg-orange-100 text-orange-700'
-                            : inc.priority === 'medium'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-[#E6DAC7] text-[#1A1A1A]/80'
-                      }`}
-                    >
-                      {inc.priority?.toUpperCase()}
+                    <div className="flex flex-col items-end gap-2">
+                      <div
+                        className={`rounded px-2 py-1 font-mono text-xs ${
+                          inc.priority === 'critical'
+                            ? 'bg-red-100 text-red-700'
+                            : inc.priority === 'high'
+                              ? 'bg-orange-100 text-orange-700'
+                              : inc.priority === 'medium'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-[#E6DAC7] text-[#1A1A1A]/80'
+                        }`}
+                      >
+                        {inc.priority?.toUpperCase()}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleMarkUrgent(inc._id);
+                        }}
+                        className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                          urgentLoadingId === inc._id
+                            ? 'border-amber-400 bg-amber-50 text-amber-700 opacity-80'
+                            : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                        }`}
+                      >
+                        {urgentLoadingId === inc._id ? 'Enviando...' : 'Urgente'}
+                      </button>
                     </div>
                   </div>
 

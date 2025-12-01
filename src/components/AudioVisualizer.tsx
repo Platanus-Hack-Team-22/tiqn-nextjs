@@ -146,3 +146,4 @@ export function AudioVisualizer({ isActive }: AudioVisualizerProps) {
   );
 }
 
+

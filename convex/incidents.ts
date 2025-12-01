@@ -195,3 +195,62 @@ export const updateCoordinates = mutation({
     return existing._id;
   },
 });
+
+// ============================================================================
+// DEMO MODE MUTATIONS
+// ============================================================================
+
+/**
+ * Create a demo incident without requiring a real Twilio call
+ */
+export const createDemoIncident = mutation({
+  args: {
+    dispatcherId: v.string(),
+    callSessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    console.log("[DEMO] Creating demo incident", args);
+
+    const incidentId = await ctx.db.insert("incidents", {
+      callSessionId: args.callSessionId,
+      externalCallId: args.callSessionId,
+      dispatcherId: args.dispatcherId,
+      status: "incoming_call",
+      priority: "medium",
+      lastUpdated: Date.now(),
+    });
+
+    console.log("[DEMO] Created demo incident:", incidentId);
+    return incidentId;
+  },
+});
+
+/**
+ * Update a single field on an incident (for demo extraction simulation)
+ */
+export const updateDemoField = mutation({
+  args: {
+    incidentId: v.id("incidents"),
+    field: v.string(),
+    value: v.union(v.string(), v.number(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    console.log("[DEMO] Updating field", args.field, "to", args.value);
+
+    const incident = await ctx.db.get(args.incidentId);
+    if (!incident) {
+      throw new Error(`Incident not found: ${args.incidentId}`);
+    }
+
+    // Build update object with the single field
+    const update: Record<string, unknown> = {
+      [args.field]: args.value,
+      lastUpdated: Date.now(),
+    };
+
+    await ctx.db.patch(args.incidentId, update);
+
+    console.log("[DEMO] Field updated successfully");
+    return args.incidentId;
+  },
+});

@@ -8,6 +8,7 @@ import type { Id, Doc } from "../../convex/_generated/dataModel";
 import { DataField } from "../components/DataField";
 import { DashboardCharts } from "../components/DashboardCharts";
 import { AudioVisualizer } from "../components/AudioVisualizer";
+import { DemoController } from "../components/DemoController";
 
 type CallStatus =
   | "initializing"
@@ -49,6 +50,10 @@ export default function Home() {
   );
   const [selectedIncidentPreview, setSelectedIncidentPreview] = useState<typeof incident>(null);
   const [urgentLoadingId, setUrgentLoadingId] = useState<Id<"incidents"> | null>(null);
+
+  // Demo Mode State
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
 
   // Mock stats - dynamic emergency statistics
   // Use fixed initial values to prevent hydration mismatch
@@ -262,6 +267,12 @@ export default function Home() {
   }, [selectedDispatcherId, addLog]);
 
   const handleAccept = () => {
+    if (isDemoMode) {
+      // Demo mode: just change status without real Twilio call
+      addLog("[DEMO] Accepting simulated call...");
+      setCallStatus("connected");
+      return;
+    }
     if (currentCall) {
       addLog("Accepting call...");
       currentCall.accept();
@@ -270,6 +281,13 @@ export default function Home() {
   };
 
   const handleDecline = () => {
+    if (isDemoMode) {
+      // Demo mode: reset to ready state
+      addLog("[DEMO] Declining simulated call...");
+      setCallStatus("ready");
+      setIncidentApproved(false);
+      return;
+    }
     if (currentCall) {
       addLog("Declining call...");
       currentCall.reject();
@@ -280,6 +298,14 @@ export default function Home() {
   };
 
   const handleDisconnect = () => {
+    if (isDemoMode) {
+      // Demo mode: reset to ready state
+      addLog("[DEMO] Ending simulated call...");
+      setCallStatus("ready");
+      setIncidentApproved(false);
+      setIsDemoMode(false);
+      return;
+    }
     if (currentCall) {
       addLog("Disconnecting call...");
       currentCall.disconnect();
@@ -288,6 +314,22 @@ export default function Home() {
       setIncidentApproved(false);
     }
   };
+
+  // Demo Mode Handlers
+  const handleDemoToggle = useCallback(() => {
+    setIsDemoOpen((prev) => !prev);
+  }, []);
+
+  const handleDemoTriggerCall = useCallback(() => {
+    addLog("[DEMO] Triggering simulated incoming call...");
+    setIsDemoMode(true);
+    setCallStatus("incoming");
+  }, [addLog]);
+
+  const handleDemoAcceptCall = useCallback(() => {
+    addLog("[DEMO] Accepting call from demo panel...");
+    setCallStatus("connected");
+  }, [addLog]);
 
   const handleApproveIncident = async () => {
     if (!displayIncident?._id) {
@@ -623,17 +665,10 @@ export default function Home() {
                       {displayIncident?.liveTranscript ? (
                         <>
                           {(() => {
-                            // Separar por frases (punto seguido de espacio o punto final)
-                            const sentences = displayIncident.liveTranscript
-                              .split(/(?<=[.!?])\s+/)
+                            // Split by double newlines - each segment is its own card
+                            const messages = displayIncident.liveTranscript
+                              .split(/\n\n+/)
                               .filter(s => s.trim());
-
-                            // Agrupar cada 2 frases como un "mensaje"
-                            const messages = [];
-                            for (let i = 0; i < sentences.length; i += 2) {
-                              const message = sentences.slice(i, i + 2).join(' ');
-                              if (message.trim()) messages.push(message);
-                            }
 
                             return messages.map((message, idx) => (
                               <div
@@ -872,6 +907,17 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Demo Mode Controller */}
+      <DemoController
+        isOpen={isDemoOpen}
+        onToggle={handleDemoToggle}
+        onTriggerIncomingCall={handleDemoTriggerCall}
+        onAcceptCall={handleDemoAcceptCall}
+        callStatus={callStatus}
+        activeIncidentId={appState?.activeIncidentId ?? null}
+        dispatcherId={selectedDispatcherId}
+      />
     </main>
   );
 }
